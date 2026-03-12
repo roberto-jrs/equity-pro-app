@@ -1,0 +1,7 @@
+streamlit
+pandas
+websocket-client
+finnhub-python
+yfinance
+plotly
+pytz
