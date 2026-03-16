@@ -105,11 +105,27 @@ def mudar_idioma():
 # --- CSS PERSONALIZADO ---
 st.markdown("""
     <style>
-        .refresh-text { font-size: 0.8rem; color: #888; text-align: right; margin-bottom: 0; }
-        [data-testid="stSidebarNav"]::before {
-            content: "⚙️ OPTIONS";
-            margin-left: 20px; margin-top: 20px;
-            font-size: 1.1rem; font-weight: bold; color: #7a7a7a;
+        /* 1. Remove as setinhas padrão (>>) do canto da tela */
+        [data-testid="stSidebarCollapsedControl"] svg {
+            display: none;
+        }
+
+        /* 2. Coloca a engrenagem no lugar das setinhas */
+        [data-testid="stSidebarCollapsedControl"]::before {
+            content: "⚙️";
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 3. Estilo do texto de atualização no topo */
+        .refresh-text { 
+            font-size: 0.8rem; 
+            color: #888; 
+            text-align: right; 
+            margin-bottom: 0; 
         }
     </style>
 """, unsafe_allow_html=True)
