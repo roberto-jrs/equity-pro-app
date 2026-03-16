@@ -50,7 +50,7 @@ idiomas = {
         "info_cambio": "The current exchange rate for conversion is",
         "info_detalhe": "All purchase fraction calculations are processed in real time based on the capital of",
         "compra": "Simulated quantity:",
-        "atualizar": "⟲    Refresh Global Values",
+        "atualizar": "⟲ Refresh Global Values",
         "historico": "HISTORICAL",
         "subtitulo": "Strategy and Clarity for the Global Market",
         "ultima_at": "Last update:"
@@ -71,7 +71,7 @@ idiomas = {
         "info_cambio": "O câmbio atual para conversão é de",
         "info_detalhe": "Todos os cálculos de frações de compra são processados em tempo real com base no capital de",
         "compra": "Quantidade simulada:",
-        "atualizar": "⟲    Atualizar Valores Globais",
+        "atualizar": "⟲ Atualizar Valores Globais",
         "historico": "HISTÓRICO",
         "subtitulo": "Estratégia e Clareza para o Mercado Global",
         "ultima_at": "Última atualização:"
@@ -92,7 +92,7 @@ idiomas = {
         "info_cambio": "El tipo de cambio actual para la conversión es",
         "info_detalhe": "Todos los cálculos de fracciones de compra se procesan en tiempo real según el capital de",
         "compra": "Cantidad simulada:",
-        "atualizar": "⟲    Actualizar Valores Globales",
+        "atualizar": "⟲ Actualizar Valores Globales",
         "historico": "HISTÓRICO",
         "subtitulo": "Estrategia y Claridad para el Mercado Global",
         "ultima_at": "Última actualización:"
