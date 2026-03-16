@@ -176,11 +176,6 @@ with st.sidebar:
     filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
     st.session_state.setor_save = filtro_setor
 
-st.divider()
-    # Texto direto entre aspas, sem depender do dicionário de idiomas
-    if st.button("Ok", use_container_width=True, type="primary"):
-        st.rerun()
-
 # --- FUNÇÕES DE DADOS ---
 def get_now_local():
     return datetime.now(pytz.utc).astimezone(pytz.timezone(sel_fuso))
