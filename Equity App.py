@@ -9,38 +9,16 @@ from datetime import datetime
 import pytz 
 import yfinance as yf
 import plotly.express as px
-from streamlit_autorefresh import st_autorefresh # Nova importação
+from streamlit_autorefresh import st_autorefresh
 
 # --- CONFIGURAÇÃO ---
 st.set_page_config(page_title="Equity Pro - Terminal", layout="wide", page_icon="▣")
 
-# Auto-atualização a cada 60 segundos
-st_autorefresh(interval=60000, key="datarefresh")
+# 1. AUTO-REFRESH (Garante a atualização a cada 60s)
+st_autorefresh(interval=60000, key="equity_refresh_counter")
 
 FINNHUB_KEY = "d6p1sfhr01qk3chijap0d6p1sfhr01qk3chijapg" 
 finnhub_client = Client(api_key=FINNHUB_KEY)
-
-# --- CSS PARA CUSTOMIZAÇÃO (MELHORIA 4 - ENGRENAGEM) ---
-st.markdown("""
-    <style>
-        /* Estilização para o horário de atualização */
-        .refresh-text {
-            font-size: 0.8rem;
-            color: #888;
-            text-align: right;
-            margin-bottom: 0;
-        }
-        /* Ajuste visual para simular uma engrenagem/menu nas opções da sidebar */
-        [data-testid="stSidebarNav"]::before {
-            content: "⚙️ SETTINGS";
-            margin-left: 20px;
-            margin-top: 20px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #7a7a7a;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 # --- INICIALIZAÇÃO DA MEMÓRIA (SESSION STATE) ---
 if 'live_data' not in st.session_state:
@@ -51,6 +29,8 @@ if 'invest_save' not in st.session_state:
     st.session_state.invest_save = 0.00
 if 'setor_save' not in st.session_state:
     st.session_state.setor_save = "Todos"
+if 'sel_idioma' not in st.session_state:
+    st.session_state.sel_idioma = "Português (BR)" # Inicia em PT por padrão se preferir
 
 # --- DICIONÁRIO DE TRADUÇÃO ---
 idiomas = {
@@ -71,7 +51,8 @@ idiomas = {
         "compra": "Simulated quantity:",
         "atualizar": "▣ Refresh Global Flow",
         "historico": "HISTORICAL",
-        "subtitulo": "Strategy and Clarity for the Global Market"
+        "subtitulo": "Strategy and Clarity for the Global Market",
+        "ultima_at": "Last update:"
     },
     "Português (BR)": {
         "titulo_idioma": "IDIOMA",
@@ -90,7 +71,8 @@ idiomas = {
         "compra": "Quantidade simulada:",
         "atualizar": "▣ Atualizar Fluxo Global",
         "historico": "HISTÓRICO",
-        "subtitulo": "Estratégia e Clareza para o Mercado Global"
+        "subtitulo": "Estratégia e Clareza para o Mercado Global",
+        "ultima_at": "Última atualização:"
     },
     "Español": {
         "titulo_idioma": "IDIOMA",
@@ -107,41 +89,79 @@ idiomas = {
         "info_cambio": "El tipo de cambio actual para la conversión es",
         "info_detalhe": "Todos los cálculos de fracciones de compra se procesan en tiempo real según el capital de",
         "compra": "Cantidad simulada:",
-        "atualizar": "▣ Atualizar Fluxo Global",
+        "atualizar": "▣ Atualizar Flujo Global",
         "historico": "HISTÓRICO",
-        "subtitulo": "Estrategia y Claridad para el Mercado Global"
+        "subtitulo": "Estrategia y Claridad para el Mercado Global",
+        "ultima_at": "Última actualización:"
     }
 }
 
 def mudar_idioma():
     st.session_state.sel_idioma = st.session_state.idioma_temp
 
-if 'sel_idioma' not in st.session_state:
-    st.session_state.sel_idioma = "English"
+# --- CSS PARA CUSTOMIZAÇÃO ---
+st.markdown("""
+    <style>
+        .refresh-text { font-size: 0.8rem; color: #888; text-align: right; margin-bottom: 0; }
+        [data-testid="stSidebarNav"]::before {
+            content: "⚙️ SETTINGS / OPÇÕES";
+            margin-left: 20px; margin-top: 20px;
+            font-size: 1.1rem; font-weight: bold; color: #7a7a7a;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-# --- BARRA LATERAL ---
+# --- BARRA LATERAL (LÓGICA DE IDIOMA PRIMEIRO) ---
 with st.sidebar:
-    t_topo = idiomas[st.session_state.sel_idioma]
-    st.header(t_topo["titulo_idioma"])
-    sel_idioma = st.selectbox(
+    st.header(idiomas[st.session_state.sel_idioma]["titulo_idioma"])
+    st.selectbox(
         "Select / Selecione:", 
         list(idiomas.keys()), 
         index=list(idiomas.keys()).index(st.session_state.sel_idioma),
         key="idioma_temp",
         on_change=mudar_idioma
     )
+    # ATUALIZA A VARIÁVEL 't' PARA O RESTANTE DO CÓDIGO
     t = idiomas[st.session_state.sel_idioma]
     st.divider()
+    
+    st.header(t["config"])
+    moeda = st.selectbox(t["moeda"], ["USD ($)", "BRL (R$)", "EUR (€)"], key="moeda_selector")
+    st.session_state.moeda_save = moeda
+    investimento = st.number_input(t["capital"], min_value=0.0, value=st.session_state.invest_save, step=500.0, key="invest_selector")
+    st.session_state.invest_save = investimento
+    
+    ativos_db = [
+        {"ticker": "AAPL", "nome": "Apple Inc.", "setor": "Tecnologia"},
+        {"ticker": "NVDA", "nome": "NVIDIA Corp.", "setor": "Tecnologia"},
+        {"ticker": "MSFT", "nome": "Microsoft Corp.", "setor": "Tecnologia"},
+        {"ticker": "GOOGL", "nome": "Alphabet Inc.", "setor": "Tecnologia"},
+        {"ticker": "TSLA", "nome": "Tesla, Inc.", "setor": "Automotivo"},
+        {"ticker": "AMZN", "nome": "Amazon.com", "setor": "Varejo Digital"},
+        {"ticker": "META", "nome": "Meta Platforms", "setor": "Tecnologia"},
+        {"ticker": "V", "nome": "Visa Inc.", "setor": "Financeiro"},
+        {"ticker": "JPM", "nome": "JPMorgan Chase", "setor": "Financeiro"},
+        {"ticker": "KO", "nome": "Coca-Cola Co.", "setor": "Consumo"},
+        {"ticker": "DIS", "nome": "Walt Disney Co.", "setor": "Entretenimento"},
+        {"ticker": "NFLX", "nome": "Netflix, Inc.", "setor": "Entretenimento"},
+        {"ticker": "BINANCE:BTCUSDT", "nome": "Bitcoin", "setor": "Cripto"},
+        {"ticker": "BINANCE:ETHUSDT", "nome": "Ethereum", "setor": "Cripto"}
+    ]
+    setores_lista = sorted(list(set([a['setor'] for a in ativos_db])))
+    filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
+    st.session_state.setor_save = filtro_setor
 
-# --- PROTEÇÃO E DADOS ---
+# --- FUNÇÕES DE APOIO ---
+def get_now_br():
+    return datetime.now(pytz.timezone('America/Sao_Paulo'))
+
 @st.cache_data(ttl=60)
 def get_safe_quote(ticker):
     try: return finnhub_client.quote(ticker)
     except: return {"c": 0, "pc": 0}
 
 def check_market_status():
-    ny_tz = pytz.timezone('America/New_York')
-    ny_now = datetime.now(ny_tz)
+    ny_now = datetime.now(pytz.timezone('America/New_York'))
     is_weekday = ny_now.weekday() < 5 
     is_hours = ny_now.hour >= 9 and (ny_now.hour < 16 or (ny_now.hour == 16 and ny_now.minute == 0))
     if ny_now.hour == 9 and ny_now.minute < 30: is_hours = False
@@ -156,65 +176,6 @@ def get_rates():
     except: return 5.15, 0.92
 
 brl_rate, eur_rate = get_rates()
-
-# --- WEBSOCKET ---
-def on_message(ws, message):
-    msg = json.loads(message)
-    if msg['type'] == 'trade':
-        for trade in msg['data']:
-            st.session_state.live_data[trade['s']] = {
-                'price': trade['p'], 'time': datetime.now().strftime('%H:%M:%S'), 'type': 'LIVE'
-            }
-
-def run_ws(symbols):
-    def on_open(ws):
-        for s in symbols: ws.send(f'{{"type":"subscribe","symbol":"{s}"}}')
-    ws = websocket.WebSocketApp(f"wss://ws.finnhub.io?token={FINNHUB_KEY}", on_message=on_message, on_open=on_open)
-    ws.run_forever()
-
-ativos_db = [
-    {"ticker": "AAPL", "nome": "Apple Inc.", "setor": "Tecnologia"},
-    {"ticker": "NVDA", "nome": "NVIDIA Corp.", "setor": "Tecnologia"},
-    {"ticker": "MSFT", "nome": "Microsoft Corp.", "setor": "Tecnologia"},
-    {"ticker": "GOOGL", "nome": "Alphabet Inc.", "setor": "Tecnologia"},
-    {"ticker": "TSLA", "nome": "Tesla, Inc.", "setor": "Automotivo"},
-    {"ticker": "AMZN", "nome": "Amazon.com", "setor": "Varejo Digital"},
-    {"ticker": "META", "nome": "Meta Platforms", "setor": "Tecnologia"},
-    {"ticker": "V", "nome": "Visa Inc.", "setor": "Financeiro"},
-    {"ticker": "JPM", "nome": "JPMorgan Chase", "setor": "Financeiro"},
-    {"ticker": "KO", "nome": "Coca-Cola Co.", "setor": "Consumo"},
-    {"ticker": "DIS", "nome": "Walt Disney Co.", "setor": "Entretenimento"},
-    {"ticker": "NFLX", "nome": "Netflix, Inc.", "setor": "Entretenimento"},
-    {"ticker": "BINANCE:BTCUSDT", "nome": "Bitcoin", "setor": "Cripto"},
-    {"ticker": "BINANCE:ETHUSDT", "nome": "Ethereum", "setor": "Cripto"}
-]
-
-if 'ws_started' not in st.session_state:
-    threading.Thread(target=run_ws, args=([a['ticker'] for a in ativos_db],), daemon=True).start()
-    st.session_state.ws_started = True
-
-# --- CONFIGURAÇÕES PESSOAIS (BARRA LATERAL) ---
-with st.sidebar:
-    st.header(t["config"])
-    moedas_lista = ["USD ($)", "BRL (R$)", "EUR (€)"]
-    idx_moeda = moedas_lista.index(st.session_state.moeda_save)
-    moeda = st.selectbox(t["moeda"], moedas_lista, index=idx_moeda, key="moeda_selector")
-    st.session_state.moeda_save = moeda
-    investimento = st.number_input(t["capital"], min_value=0.0, value=st.session_state.invest_save, step=500.0, key="invest_selector")
-    st.session_state.invest_save = investimento
-    setores_lista = sorted(list(set([a['setor'] for a in ativos_db])))
-    opcoes_setor = [t["todos"]] + setores_lista
-    idx_setor = 0 
-    if st.session_state.setor_save in opcoes_setor:
-        idx_setor = opcoes_setor.index(st.session_state.setor_save)
-    filtro_setor = st.selectbox(t["filtro"], opcoes_setor, index=idx_setor, key="setor_selector")
-    st.session_state.setor_save = filtro_setor
-
-# --- LÓGICA DE INTERFACE ---
-def converter(val):
-    if "BRL" in moeda: return val * brl_rate, "R$"
-    if "EUR" in moeda: return val * eur_rate, "€"
-    return val, "$"
 
 def render_logo_jr():
     st.markdown(f"""
@@ -232,19 +193,20 @@ def render_logo_jr():
         <p style="margin-top: -10px; color: #666; font-size: 0.9rem;">{t["subtitulo"]}</p>
     """, unsafe_allow_html=True)
 
-# --- CABEÇALHO (MELHORIA 2 - BOTÃO NO TOPO E HORÁRIO) ---
+# --- CABEÇALHO ---
 render_logo_jr()
 
 c_top1, c_top2 = st.columns([3, 1])
 with c_top2:
     if st.button(t["atualizar"], use_container_width=True):
         st.rerun()
-    st.markdown(f"<p class='refresh-text'>Last update: {datetime.now().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
+    # HORÁRIO AJUSTADO PARA BRASIL
+    st.markdown(f"<p class='refresh-text'>{t['ultima_at']} {get_now_br().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
 
 status_label, status_color, status_text = check_market_status()
 st.markdown(f"<div style='background-color: {status_color}; padding: 8px; border-radius: 4px; text-align: center; color: white; font-weight: bold; margin-bottom: 20px; font-size: 0.8rem;'>STATUS: {status_label} | {status_text}</div>", unsafe_allow_html=True)
-st.markdown("---")
 
+# --- GRÁFICO E TERMINAL ---
 col_stats1, col_stats2 = st.columns([1, 2])
 with col_stats1:
     st.subheader(t["alocacao"])
@@ -252,17 +214,7 @@ with col_stats1:
     if filtro_setor != t["todos"]: df_pizza = df_pizza[df_pizza['setor'] == filtro_setor]
     fig = px.pie(df_pizza, names='setor', hole=0.4, template="plotly_dark", color_discrete_sequence=px.colors.qualitative.Set2)
     fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=230, showlegend=False)
-    
-    # MELHORIA 3 - CONFIGURAÇÃO DO BOTÃO DE DOWNLOAD NO GRÁFICO
-    st.plotly_chart(fig, use_container_width=True, config={
-        'displaylogo': False,
-        'modeBarButtonsToRemove': ['zoom', 'pan', 'select', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d'],
-        'toImageButtonOptions': {
-            'format': 'png', 
-            'filename': 'equity_pro_allocation',
-            'scale': 2 # Melhora a qualidade do download
-        }
-    })
+    st.plotly_chart(fig, use_container_width=True, config={'displaylogo': False})
 
 with col_stats2:
     st.subheader(t["terminal"])
@@ -272,8 +224,14 @@ with col_stats2:
     st.info(f"{t['info_cambio']} **1 USD = {taxa_exibida:.2f} {simbolo_moeda}**. {t['info_detalhe']} {moeda}.")
 
 st.divider()
+# --- CARDS DE ATIVOS ---
 ativos_f = ativos_db if filtro_setor == t["todos"] else [a for a in ativos_db if a['setor'] == filtro_setor]
 cols = st.columns(3)
+
+def converter(val):
+    if "BRL" in moeda: return val * brl_rate, "R$"
+    if "EUR" in moeda: return val * eur_rate, "€"
+    return val, "$"
 
 for i, ativo in enumerate(ativos_f):
     with cols[i % 3]:
@@ -282,30 +240,23 @@ for i, ativo in enumerate(ativos_f):
         q = get_safe_quote(ticker)
         fech_ant = q.get('pc', 0)
         
-        # MELHORIA 1 - LÓGICA DO BADGE "HISTÓRICO"
+        # SÓ MOSTRA HISTÓRICO SE MERCADO OFF
         label_status = ""
-        if status_label == "OFF":
-            label_status = t["historico"]
-        elif data:
-            label_status = "LIVE"
+        if status_label == "OFF": label_status = t["historico"]
+        elif data: label_status = "LIVE"
 
-        if not data: data = {'price': q.get('c', 0), 'time': '--:--', 'type': label_status}
-        var = ((data['price'] - fech_ant) / fech_ant * 100) if fech_ant > 0 else 0
-        p_c, simb = converter(data['price'])
+        price = data['price'] if data else q.get('c', 0)
+        time_ref = data['time'] if data else "--:--"
+        var = ((price - fech_ant) / fech_ant * 100) if fech_ant > 0 else 0
+        p_conv, simb = converter(price)
         
         with st.container(border=True):
             ch, cs = st.columns([2, 1])
             ch.markdown(f"**{ativo['nome']}**")
-            
-            # Só desenha o quadradinho se houver um status (evita o "Histórico" no mercado ON)
             if label_status:
                 cs.markdown(f"<span style='background:{'#26a69a' if label_status=='LIVE' else '#546e7a'}; color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;'>{label_status}</span>", unsafe_allow_html=True)
-            
-            st.markdown(f"### {simb} {p_c:,.2f}")
+            st.markdown(f"### {simb} {p_conv:,.2f}")
             st.markdown(f"<p style='color:{'#26a69a' if var >= 0 else '#ef5350'}; font-weight:bold; margin-top:-15px;'>{'▲' if var >= 0 else '▼'} {var:.2f}%</p>", unsafe_allow_html=True)
-            taxa_conversao = brl_rate if "BRL" in moeda else (eur_rate if "EUR" in moeda else 1)
-            inv_usd = investimento / taxa_conversao
-            st.write(f"{t['compra']} **{inv_usd / data['price'] if data['price'] > 0 else 0:.5f}**")
-            st.caption(f"Code: `{ticker}` | Ref: {data['time']}")
-
-# Fim do código. 
+            taxa_conv = brl_rate if "BRL" in moeda else (eur_rate if "EUR" in moeda else 1)
+            st.write(f"{t['compra']} **{(investimento / taxa_conv) / price if price > 0 else 0:.5f}**")
+            st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
