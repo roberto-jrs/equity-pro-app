@@ -2,6 +2,7 @@ streamlit
 pandas
 websocket-client
 finnhub-python
+pytz
 yfinance
 plotly
-pytz
+streamlit-autorefresh
