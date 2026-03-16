@@ -153,7 +153,7 @@ with st.sidebar:
 
 # --- FUNÇÕES DE APOIO ---
 def get_now_br():
-    return datetime.now(pytz.timezone('America/Sao_Paulo'))
+    return datetime.now(pytz.utc).astimezone(pytz.timezone('America/Sao_Paulo'))
 
 @st.cache_data(ttl=60)
 def get_safe_quote(ticker):
