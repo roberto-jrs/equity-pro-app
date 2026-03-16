@@ -14,13 +14,13 @@ from streamlit_autorefresh import st_autorefresh
 # --- CONFIGURAÇÃO ---
 st.set_page_config(page_title="Equity Pro - Terminal", layout="wide", page_icon="▣")
 
-# 1. AUTO-REFRESH (Garante a atualização a cada 60s)
-st_autorefresh(interval=60000, key="equity_refresh_counter")
+# AUTO-REFRESH a cada 60 segundos
+st_autorefresh(interval=60000, key="equity_global_refresh")
 
 FINNHUB_KEY = "d6p1sfhr01qk3chijap0d6p1sfhr01qk3chijapg" 
 finnhub_client = Client(api_key=FINNHUB_KEY)
 
-# --- INICIALIZAÇÃO DA MEMÓRIA (SESSION STATE) ---
+# --- INICIALIZAÇÃO DA MEMÓRIA ---
 if 'live_data' not in st.session_state:
     st.session_state.live_data = {}
 if 'moeda_save' not in st.session_state:
@@ -30,7 +30,7 @@ if 'invest_save' not in st.session_state:
 if 'setor_save' not in st.session_state:
     st.session_state.setor_save = "Todos"
 if 'sel_idioma' not in st.session_state:
-    st.session_state.sel_idioma = "Português (BR)" # Inicia em PT por padrão se preferir
+    st.session_state.sel_idioma = "Português (BR)"
 
 # --- DICIONÁRIO DE TRADUÇÃO ---
 idiomas = {
@@ -40,6 +40,7 @@ idiomas = {
         "moeda": "Display Currency:",
         "capital": "Simulation Capital:",
         "filtro": "Filter by Sector:",
+        "fuso": "User Timezone:",
         "todos": "All",
         "status_on": "STOCK MARKET OPEN (NYSE/NASDAQ)",
         "status_off": "STOCK MARKET CLOSED (SHOWING HISTORICAL DATA)",
@@ -60,6 +61,7 @@ idiomas = {
         "moeda": "Moeda de Exibição:",
         "capital": "Capital para Simulação:",
         "filtro": "Filtrar por Setor:",
+        "fuso": "Fuso Horário do Usuário:",
         "todos": "Todos",
         "status_on": "MERCADO DE AÇÕES ABERTO (NYSE/NASDAQ)",
         "status_off": "MERCADO DE AÇÕES FECHADO (EXIBINDO DADOS HISTÓRICOS)",
@@ -80,6 +82,7 @@ idiomas = {
         "moeda": "Moneda de Visualización:",
         "capital": "Capital de Simulación:",
         "filtro": "Filtrar por Sector:",
+        "fuso": "Zona Horaria:",
         "todos": "Todos",
         "status_on": "MERCADO DE VALORES ABIERTO (NYSE/NASDAQ)",
         "status_off": "MERCADO DE VALORES CERRADO (MOSTRANDO DATOS HISTÓRICOS)",
@@ -89,7 +92,7 @@ idiomas = {
         "info_cambio": "El tipo de cambio actual para la conversión es",
         "info_detalhe": "Todos los cálculos de fracciones de compra se procesan en tiempo real según el capital de",
         "compra": "Cantidad simulada:",
-        "atualizar": "▣ Atualizar Flujo Global",
+        "atualizar": "▣ Atualizar Fluxo Global",
         "historico": "HISTÓRICO",
         "subtitulo": "Estrategia y Claridad para el Mercado Global",
         "ultima_at": "Última actualización:"
@@ -99,19 +102,19 @@ idiomas = {
 def mudar_idioma():
     st.session_state.sel_idioma = st.session_state.idioma_temp
 
-# --- CSS PARA CUSTOMIZAÇÃO ---
+# --- CSS PERSONALIZADO ---
 st.markdown("""
     <style>
         .refresh-text { font-size: 0.8rem; color: #888; text-align: right; margin-bottom: 0; }
         [data-testid="stSidebarNav"]::before {
-            content: "⚙️ SETTINGS / OPÇÕES";
+            content: "⚙️ OPTIONS";
             margin-left: 20px; margin-top: 20px;
             font-size: 1.1rem; font-weight: bold; color: #7a7a7a;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# --- BARRA LATERAL (LÓGICA DE IDIOMA PRIMEIRO) ---
+# --- SIDEBAR (CONFIGURAÇÕES) ---
 with st.sidebar:
     st.header(idiomas[st.session_state.sel_idioma]["titulo_idioma"])
     st.selectbox(
@@ -121,13 +124,18 @@ with st.sidebar:
         key="idioma_temp",
         on_change=mudar_idioma
     )
-    # ATUALIZA A VARIÁVEL 't' PARA O RESTANTE DO CÓDIGO
     t = idiomas[st.session_state.sel_idioma]
     st.divider()
     
     st.header(t["config"])
+    
+    # SELETOR DE FUSO HORÁRIO
+    fusos_lista = ['America/Sao_Paulo', 'America/New_York', 'Europe/London', 'Europe/Paris', 'Asia/Tokyo', 'UTC']
+    sel_fuso = st.selectbox(t["fuso"], fusos_lista, index=0)
+    
     moeda = st.selectbox(t["moeda"], ["USD ($)", "BRL (R$)", "EUR (€)"], key="moeda_selector")
     st.session_state.moeda_save = moeda
+    
     investimento = st.number_input(t["capital"], min_value=0.0, value=st.session_state.invest_save, step=500.0, key="invest_selector")
     st.session_state.invest_save = investimento
     
@@ -151,9 +159,9 @@ with st.sidebar:
     filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
     st.session_state.setor_save = filtro_setor
 
-# --- FUNÇÕES DE APOIO ---
-def get_now_br():
-    return datetime.now(pytz.utc).astimezone(pytz.timezone('America/Sao_Paulo'))
+# --- FUNÇÕES DE DADOS ---
+def get_now_local():
+    return datetime.now(pytz.utc).astimezone(pytz.timezone(sel_fuso))
 
 @st.cache_data(ttl=60)
 def get_safe_quote(ticker):
@@ -177,6 +185,7 @@ def get_rates():
 
 brl_rate, eur_rate = get_rates()
 
+# --- INTERFACE ---
 def render_logo_jr():
     st.markdown(f"""
         <div style="display: flex; align-items: center; margin-bottom: 10px;">
@@ -193,20 +202,19 @@ def render_logo_jr():
         <p style="margin-top: -10px; color: #666; font-size: 0.9rem;">{t["subtitulo"]}</p>
     """, unsafe_allow_html=True)
 
-# --- CABEÇALHO ---
 render_logo_jr()
 
 c_top1, c_top2 = st.columns([3, 1])
 with c_top2:
     if st.button(t["atualizar"], use_container_width=True):
         st.rerun()
-    # HORÁRIO AJUSTADO PARA BRASIL
-    st.markdown(f"<p class='refresh-text'>{t['ultima_at']} {get_now_br().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
+    # EXIBE O HORÁRIO BASEADO NO FUSO ESCOLHIDO
+    st.markdown(f"<p class='refresh-text'>{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
 
 status_label, status_color, status_text = check_market_status()
 st.markdown(f"<div style='background-color: {status_color}; padding: 8px; border-radius: 4px; text-align: center; color: white; font-weight: bold; margin-bottom: 20px; font-size: 0.8rem;'>STATUS: {status_label} | {status_text}</div>", unsafe_allow_html=True)
 
-# --- GRÁFICO E TERMINAL ---
+# --- TERMINAL E CARDS ---
 col_stats1, col_stats2 = st.columns([1, 2])
 with col_stats1:
     st.subheader(t["alocacao"])
@@ -219,12 +227,11 @@ with col_stats1:
 with col_stats2:
     st.subheader(t["terminal"])
     st.write(f"{t['monitor']} **{filtro_setor}**")
-    taxa_exibida = brl_rate if "BRL" in moeda else (eur_rate if "EUR" in moeda else 1.0)
-    simbolo_moeda = "BRL" if "BRL" in moeda else ("EUR" if "EUR" in moeda else "USD")
-    st.info(f"{t['info_cambio']} **1 USD = {taxa_exibida:.2f} {simbolo_moeda}**. {t['info_detalhe']} {moeda}.")
+    taxa_ex = brl_rate if "BRL" in moeda else (eur_rate if "EUR" in moeda else 1.0)
+    simb_m = "BRL" if "BRL" in moeda else ("EUR" if "EUR" in moeda else "USD")
+    st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {moeda}.")
 
 st.divider()
-# --- CARDS DE ATIVOS ---
 ativos_f = ativos_db if filtro_setor == t["todos"] else [a for a in ativos_db if a['setor'] == filtro_setor]
 cols = st.columns(3)
 
@@ -240,7 +247,6 @@ for i, ativo in enumerate(ativos_f):
         q = get_safe_quote(ticker)
         fech_ant = q.get('pc', 0)
         
-        # SÓ MOSTRA HISTÓRICO SE MERCADO OFF
         label_status = ""
         if status_label == "OFF": label_status = t["historico"]
         elif data: label_status = "LIVE"
@@ -257,6 +263,6 @@ for i, ativo in enumerate(ativos_f):
                 cs.markdown(f"<span style='background:{'#26a69a' if label_status=='LIVE' else '#546e7a'}; color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;'>{label_status}</span>", unsafe_allow_html=True)
             st.markdown(f"### {simb} {p_conv:,.2f}")
             st.markdown(f"<p style='color:{'#26a69a' if var >= 0 else '#ef5350'}; font-weight:bold; margin-top:-15px;'>{'▲' if var >= 0 else '▼'} {var:.2f}%</p>", unsafe_allow_html=True)
-            taxa_conv = brl_rate if "BRL" in moeda else (eur_rate if "EUR" in moeda else 1)
-            st.write(f"{t['compra']} **{(investimento / taxa_conv) / price if price > 0 else 0:.5f}**")
+            taxa_c = brl_rate if "BRL" in moeda else (eur_rate if "EUR" in moeda else 1)
+            st.write(f"{t['compra']} **{(investimento / taxa_c) / price if price > 0 else 0:.5f}**")
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
