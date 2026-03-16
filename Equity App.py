@@ -9,12 +9,38 @@ from datetime import datetime
 import pytz 
 import yfinance as yf
 import plotly.express as px
+from streamlit_autorefresh import st_autorefresh # Nova importação
 
 # --- CONFIGURAÇÃO ---
 st.set_page_config(page_title="Equity Pro - Terminal", layout="wide", page_icon="▣")
 
+# Auto-atualização a cada 60 segundos
+st_autorefresh(interval=60000, key="datarefresh")
+
 FINNHUB_KEY = "d6p1sfhr01qk3chijap0d6p1sfhr01qk3chijapg" 
 finnhub_client = Client(api_key=FINNHUB_KEY)
+
+# --- CSS PARA CUSTOMIZAÇÃO (MELHORIA 4 - ENGRENAGEM) ---
+st.markdown("""
+    <style>
+        /* Estilização para o horário de atualização */
+        .refresh-text {
+            font-size: 0.8rem;
+            color: #888;
+            text-align: right;
+            margin-bottom: 0;
+        }
+        /* Ajuste visual para simular uma engrenagem/menu nas opções da sidebar */
+        [data-testid="stSidebarNav"]::before {
+            content: "⚙️ SETTINGS";
+            margin-left: 20px;
+            margin-top: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #7a7a7a;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # --- INICIALIZAÇÃO DA MEMÓRIA (SESSION STATE) ---
 if 'live_data' not in st.session_state:
@@ -26,7 +52,7 @@ if 'invest_save' not in st.session_state:
 if 'setor_save' not in st.session_state:
     st.session_state.setor_save = "Todos"
 
-# --- DICIONÁRIO DE TRADUÇÃO (TRILÍNGUE COMPLETO) ---
+# --- DICIONÁRIO DE TRADUÇÃO ---
 idiomas = {
     "English": {
         "titulo_idioma": "LANGUAGE",
@@ -81,30 +107,22 @@ idiomas = {
         "info_cambio": "El tipo de cambio actual para la conversión es",
         "info_detalhe": "Todos los cálculos de fracciones de compra se procesan en tiempo real según el capital de",
         "compra": "Cantidad simulada:",
-        "atualizar": "▣ Actualizar Flujo Global",
+        "atualizar": "▣ Atualizar Fluxo Global",
         "historico": "HISTÓRICO",
         "subtitulo": "Estrategia y Claridad para el Mercado Global"
     }
 }
 
-# --- FUNÇÃO PARA ATUALIZAR O IDIOMA IMEDIATAMENTE ---
 def mudar_idioma():
     st.session_state.sel_idioma = st.session_state.idioma_temp
 
-# --- INICIALIZAÇÃO DO ESTADO DO IDIOMA ---
 if 'sel_idioma' not in st.session_state:
     st.session_state.sel_idioma = "English"
 
-# --- BARRA LATERAL (LÓGICA CORRIGIDA) ---
+# --- BARRA LATERAL ---
 with st.sidebar:
-    # 1. Pegamos a tradução ATUAL da memória para o título
     t_topo = idiomas[st.session_state.sel_idioma]
-    
-    # 2. Desenhamos o Título (Agora ele sempre virá da memória atualizada)
     st.header(t_topo["titulo_idioma"])
-    
-    # 3. O Seletor com a "mágica" do on_change
-    # Quando você muda aqui, ele chama a função mudar_idioma e limpa o atraso
     sel_idioma = st.selectbox(
         "Select / Selecione:", 
         list(idiomas.keys()), 
@@ -112,10 +130,7 @@ with st.sidebar:
         key="idioma_temp",
         on_change=mudar_idioma
     )
-    
-    # 4. Atualizamos a variável 't' para o resto do código abaixo
     t = idiomas[st.session_state.sel_idioma]
-    
     st.divider()
 
 # --- PROTEÇÃO E DADOS ---
@@ -178,27 +193,20 @@ if 'ws_started' not in st.session_state:
     threading.Thread(target=run_ws, args=([a['ticker'] for a in ativos_db],), daemon=True).start()
     st.session_state.ws_started = True
 
-# --- CONFIGURAÇÕES PESSOAIS (COM MEMÓRIA) ---
+# --- CONFIGURAÇÕES PESSOAIS (BARRA LATERAL) ---
 with st.sidebar:
     st.header(t["config"])
-    
-    # Moeda com memória
     moedas_lista = ["USD ($)", "BRL (R$)", "EUR (€)"]
     idx_moeda = moedas_lista.index(st.session_state.moeda_save)
     moeda = st.selectbox(t["moeda"], moedas_lista, index=idx_moeda, key="moeda_selector")
     st.session_state.moeda_save = moeda
-
-    # Investimento com memória
     investimento = st.number_input(t["capital"], min_value=0.0, value=st.session_state.invest_save, step=500.0, key="invest_selector")
     st.session_state.invest_save = investimento
-
-    # Filtro de setor com memória
     setores_lista = sorted(list(set([a['setor'] for a in ativos_db])))
     opcoes_setor = [t["todos"]] + setores_lista
     idx_setor = 0 
     if st.session_state.setor_save in opcoes_setor:
         idx_setor = opcoes_setor.index(st.session_state.setor_save)
-    
     filtro_setor = st.selectbox(t["filtro"], opcoes_setor, index=idx_setor, key="setor_selector")
     st.session_state.setor_save = filtro_setor
 
@@ -224,7 +232,15 @@ def render_logo_jr():
         <p style="margin-top: -10px; color: #666; font-size: 0.9rem;">{t["subtitulo"]}</p>
     """, unsafe_allow_html=True)
 
+# --- CABEÇALHO (MELHORIA 2 - BOTÃO NO TOPO E HORÁRIO) ---
 render_logo_jr()
+
+c_top1, c_top2 = st.columns([3, 1])
+with c_top2:
+    if st.button(t["atualizar"], use_container_width=True):
+        st.rerun()
+    st.markdown(f"<p class='refresh-text'>Last update: {datetime.now().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
+
 status_label, status_color, status_text = check_market_status()
 st.markdown(f"<div style='background-color: {status_color}; padding: 8px; border-radius: 4px; text-align: center; color: white; font-weight: bold; margin-bottom: 20px; font-size: 0.8rem;'>STATUS: {status_label} | {status_text}</div>", unsafe_allow_html=True)
 st.markdown("---")
@@ -236,7 +252,17 @@ with col_stats1:
     if filtro_setor != t["todos"]: df_pizza = df_pizza[df_pizza['setor'] == filtro_setor]
     fig = px.pie(df_pizza, names='setor', hole=0.4, template="plotly_dark", color_discrete_sequence=px.colors.qualitative.Set2)
     fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=230, showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
+    
+    # MELHORIA 3 - CONFIGURAÇÃO DO BOTÃO DE DOWNLOAD NO GRÁFICO
+    st.plotly_chart(fig, use_container_width=True, config={
+        'displaylogo': False,
+        'modeBarButtonsToRemove': ['zoom', 'pan', 'select', 'lasso2d', 'zoomIn2d', 'zoomOut2d', 'autoScale2d'],
+        'toImageButtonOptions': {
+            'format': 'png', 
+            'filename': 'equity_pro_allocation',
+            'scale': 2 # Melhora a qualidade do download
+        }
+    })
 
 with col_stats2:
     st.subheader(t["terminal"])
@@ -255,14 +281,26 @@ for i, ativo in enumerate(ativos_f):
         data = st.session_state.live_data.get(ticker)
         q = get_safe_quote(ticker)
         fech_ant = q.get('pc', 0)
-        label_status = "LIVE" if data else t["historico"]
+        
+        # MELHORIA 1 - LÓGICA DO BADGE "HISTÓRICO"
+        label_status = ""
+        if status_label == "OFF":
+            label_status = t["historico"]
+        elif data:
+            label_status = "LIVE"
+
         if not data: data = {'price': q.get('c', 0), 'time': '--:--', 'type': label_status}
         var = ((data['price'] - fech_ant) / fech_ant * 100) if fech_ant > 0 else 0
         p_c, simb = converter(data['price'])
+        
         with st.container(border=True):
             ch, cs = st.columns([2, 1])
             ch.markdown(f"**{ativo['nome']}**")
-            cs.markdown(f"<span style='background:{'#26a69a' if data['type']=='LIVE' else '#546e7a'}; color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;'>{label_status}</span>", unsafe_allow_html=True)
+            
+            # Só desenha o quadradinho se houver um status (evita o "Histórico" no mercado ON)
+            if label_status:
+                cs.markdown(f"<span style='background:{'#26a69a' if label_status=='LIVE' else '#546e7a'}; color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;'>{label_status}</span>", unsafe_allow_html=True)
+            
             st.markdown(f"### {simb} {p_c:,.2f}")
             st.markdown(f"<p style='color:{'#26a69a' if var >= 0 else '#ef5350'}; font-weight:bold; margin-top:-15px;'>{'▲' if var >= 0 else '▼'} {var:.2f}%</p>", unsafe_allow_html=True)
             taxa_conversao = brl_rate if "BRL" in moeda else (eur_rate if "EUR" in moeda else 1)
@@ -270,5 +308,4 @@ for i, ativo in enumerate(ativos_f):
             st.write(f"{t['compra']} **{inv_usd / data['price'] if data['price'] > 0 else 0:.5f}**")
             st.caption(f"Code: `{ticker}` | Ref: {data['time']}")
 
-st.divider()
-st.button(t["atualizar"], on_click=st.rerun)
+# Fim do código. 
