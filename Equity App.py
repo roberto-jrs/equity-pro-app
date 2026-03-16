@@ -177,8 +177,8 @@ with st.sidebar:
     st.session_state.setor_save = filtro_setor
 
 st.divider()
-    # Botão de OK que recarrega o app (o que geralmente fecha o menu em dispositivos móveis)
-    if st.button(t["confirmar"], use_container_width=True, type="primary"):
+    # Texto direto entre aspas, sem depender do dicionário de idiomas
+    if st.button("Ok", use_container_width=True, type="primary"):
         st.rerun()
 
 # --- FUNÇÕES DE DADOS ---
