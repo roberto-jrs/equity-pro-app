@@ -105,27 +105,28 @@ def mudar_idioma():
 # --- CSS PERSONALIZADO ---
 st.markdown("""
     <style>
-        /* 1. Remove as setinhas padrão (>>) do canto da tela */
-        [data-testid="stSidebarCollapsedControl"] svg {
-            display: none;
+        /* 1. SELECIONA O BOTÃO DE ABRIR (SETINHAS) E APLICA A ENGRENAGEM */
+        button[data-testid="stSidebarCollapsedControl"] svg {
+            display: none !important;
         }
-
-        /* 2. Coloca a engrenagem no lugar das setinhas */
-        [data-testid="stSidebarCollapsedControl"]::before {
+        
+        button[data-testid="stSidebarCollapsedControl"]::after {
             content: "⚙️";
-            font-size: 24px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-size: 26px !important;
+            display: block !important;
         }
 
-        /* 3. Estilo do texto de atualização no topo */
+        /* 2. ESTILO DO TEXTO DE ATUALIZAÇÃO NO TOPO */
         .refresh-text { 
             font-size: 0.8rem; 
             color: #888; 
             text-align: right; 
             margin-bottom: 0; 
+        }
+
+        /* 3. OPCIONAL: Remove aquela linha extra que às vezes o Streamlit cria no topo */
+        header[data-testid="stHeader"] {
+            background-color: rgba(0,0,0,0) !important;
         }
     </style>
 """, unsafe_allow_html=True)
