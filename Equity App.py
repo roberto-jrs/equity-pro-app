@@ -18,11 +18,16 @@ st.set_page_config(page_title="Equity Pro - Terminal", layout="wide", page_icon=
 
 def check_market_status():
     """Verifica se a bolsa de NY está aberta."""
+    """Verifica se a bolsa de NY está aberta."""
     ny_now = datetime.now(pytz.timezone('America/New_York'))
     is_weekday = ny_now.weekday() < 5 
-    # Horário de funcionamento: 9:30 às 16:00
-    is_hours = ny_now.hour >= 9 and (ny_now.hour < 16 or (ny_now.hour == 16 and ny_now.minute == 0))
-    if ny_now.hour == 9 and ny_now.minute < 30: is_hours = False
+    
+    # Apenas com a hora e minuto para comparar direto
+    current_time = ny_now.time()
+    market_open = time(9, 30)
+    market_close = time(16, 0)
+
+    is_hours = market_open <= current_time < market_close
     
     # Retornamos uma tupla com (Status, Cor, Texto Traduzido)
     # Nota: Usamos chaves genéricas aqui porque o dicionário 't' é definido depois na sidebar
