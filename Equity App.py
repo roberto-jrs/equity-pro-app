@@ -77,7 +77,8 @@ idiomas = {
         "atualizar": "⟲ Refresh Global Values",
         "historico": "HISTORICAL",
         "subtitulo": "Strategy and Clarity for the Global Market",
-        "ultima_at": "Last update:"
+        "ultima_at": "Last update:",
+        "grafico_h": "Historical Chart"
     },
     "Português (BR)": {
         "titulo_idioma": "IDIOMA",
@@ -98,7 +99,8 @@ idiomas = {
         "atualizar": "⟲ Atualizar Valores Globais",
         "historico": "HISTÓRICO",
         "subtitulo": "Estratégia e Clareza para o Mercado Global",
-        "ultima_at": "Última atualização:"
+        "ultima_at": "Última atualização:",
+        "grafico_h": "Gráfico Histórico"
     },
     "Español": {
         "titulo_idioma": "IDIOMA",
@@ -119,7 +121,8 @@ idiomas = {
         "atualizar": "⟲ Atualizar Valores Globales",
         "historico": "HISTÓRICO",
         "subtitulo": "Estrategia y Claridad para el Mercado Global",
-        "ultima_at": "Última actualización:"
+        "ultima_at": "Última actualización:",
+        "grafico_h": "Gráfico Histórico"
     }
 }
 
@@ -291,22 +294,18 @@ for i, ativo in enumerate(ativos_f):
             st.write(f"{t['compra']} **{(invest_atual / taxa_c) / price if price > 0 else 0:.5f}**")
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
             
-          # --- EXPANDER PARA O GRÁFICO (COLUNA MULTI-INDEX) ---
-            with st.expander(f"📈 {t.get('historico', 'History')} / Chart"):
+            # --- EXPANDER PARA O GRÁFICO (NOME ATUALIZADO E INDENTAÇÃO CORRETA) ---
+            with st.expander(f"📈 {t.get('grafico_h', 'Gráfico Histórico')}"):
                 try:
-                    # Definimos o período
                     periodo_grafico = "1d" if status_mercado == "ON" else "5d"
                     intervalo_grafico = "5m" if status_mercado == "ON" else "60m"
                     
-                    # Busca os dados
                     hist_data = yf.download(ticker, period=periodo_grafico, interval=intervalo_grafico, progress=False)
                     
                     if not hist_data.empty:
-                        # --- CORREÇÃO AQUI: Remove o nível extra de colunas do Yahoo Finance ---
                         if isinstance(hist_data.columns, pd.MultiIndex):
                             hist_data.columns = hist_data.columns.get_level_values(0)
                         
-                        # Agora o 'Close' existe sozinho
                         fig_in = px.line(
                             hist_data, 
                             y="Close", 
@@ -319,9 +318,7 @@ for i, ativo in enumerate(ativos_f):
                             xaxis_title="",
                             yaxis_title=""
                         )
-                        # Remove a legenda do eixo Y para o gráfico ficar mais limpo
                         fig_in.update_yaxes(visible=True, showticklabels=True)
-                        
                         st.plotly_chart(fig_in, use_container_width=True, config={'displaylogo': False})
                     else:
                         st.warning("Sem dados disponíveis agora.")
