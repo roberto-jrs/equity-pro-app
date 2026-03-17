@@ -3,9 +3,9 @@ import pandas as pd
 import websocket
 import json
 import threading
-import time
+import time  # Este é o módulo de tempo do sistema
 from finnhub import Client
-from datetime import datetime
+from datetime import datetime, time as dt_time # Importamos o 'time' do datetime com apelido
 import pytz 
 import yfinance as yf
 import plotly.express as px
@@ -14,20 +14,24 @@ from streamlit_autorefresh import st_autorefresh
 # --- 1. CONFIGURAÇÃO DE PÁGINA ---
 st.set_page_config(page_title="Equity Pro - Terminal", layout="wide", page_icon="▣")
 
-# --- 2. DEFINIÇÃO DAS FUNÇÕES (Essencial vir antes de serem chamadas) ---
+# --- 2. DEFINIÇÃO DAS FUNÇÕES ---
 
 def check_market_status():
     """Verifica se a bolsa de NY está aberta."""
+    # 1. Pega a hora atual em NY
     ny_now = datetime.now(pytz.timezone('America/New_York'))
+    
+    # 2. Verifica se é dia de semana (0=Segunda, 4=Sexta)
     is_weekday = ny_now.weekday() < 5 
-    # Horário de funcionamento: 9:30 às 16:00
-    is_hours = ny_now.hour >= 9 and (ny_now.hour < 16 or (ny_now.hour == 16 and ny_now.minute == 0))
-    if ny_now.hour == 9 and ny_now.minute < 30: is_hours
+    
+    # 3. Define os horários de abertura e fechamento
+    current_time = ny_now.time()
+    market_open = dt_time(9, 30)
+    market_close = dt_time(16, 0)
 
+    # 4. Verifica se está dentro do intervalo
     is_hours = market_open <= current_time < market_close
     
-    # Retornamos uma tupla com (Status, Cor, Texto Traduzido)
-    # Nota: Usamos chaves genéricas aqui porque o dicionário 't' é definido depois na sidebar
     if is_weekday and is_hours:
         return "ON", "#26a69a"
     else:
