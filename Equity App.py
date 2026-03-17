@@ -249,8 +249,10 @@ for i, ativo in enumerate(ativos_f):
         fech_ant = q.get('pc', 0)
         
         label_status = ""
-        if status_label == "OFF": label_status = t["historico"]
-        elif data: label_status = "LIVE"
+        if status_label == "OFF": 
+            label_status = t["historico"]
+        elif data: 
+            label_status = "LIVE"
 
         price = data['price'] if data else q.get('c', 0)
         time_ref = data['time'] if data else "--:--"
@@ -262,6 +264,7 @@ for i, ativo in enumerate(ativos_f):
             ch.markdown(f"**{ativo['nome']}**")
             if label_status:
                 cs.markdown(f"<span style='background:{'#26a69a' if label_status=='LIVE' else '#546e7a'}; color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;'>{label_status}</span>", unsafe_allow_html=True)
+            
             st.markdown(f"### {simb} {p_conv:,.2f}")
             st.markdown(f"<p style='color:{'#26a69a' if var >= 0 else '#ef5350'}; font-weight:bold; margin-top:-15px;'>{'▲' if var >= 0 else '▼'} {var:.2f}%</p>", unsafe_allow_html=True)
             
@@ -270,20 +273,19 @@ for i, ativo in enumerate(ativos_f):
             st.write(f"{t['compra']} **{(invest_atual / taxa_c) / price if price > 0 else 0:.5f}**")
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
             
-            # --- EXPANDER PARA O GRÁFICO (Dentro do card) ---
-           with st.expander(f"📈 {t['historico']} / Chart"):
+            # --- EXPANDER PARA O GRÁFICO (AGORA COM INDENTAÇÃO CORRETA) ---
+            with st.expander(f"📈 {t['historico']} / Chart"):
                 try:
-                    # Se mercado ON: pega hoje (1d) em 5min. Se mercado OFF: pega 5 dias (5d) em 1h.
+                    # Se mercado ON: hoje (1d). Se mercado OFF: últimos 5 dias (5d)
                     periodo = "1d" if status_label == "ON" else "5d"
                     intervalo = "5m" if status_label == "ON" else "60m"
                     
                     hist_data = yf.download(ticker, period=periodo, interval=intervalo, progress=False)
-                    
                     if not hist_data.empty:
                         fig_in = px.line(hist_data, y="Close", template="plotly_dark")
                         fig_in.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=150)
                         st.plotly_chart(fig_in, use_container_width=True, config={'displaylogo': False})
                     else:
-                        st.write("Market data currently unavailable.")
+                        st.write("Awaiting data...")
                 except:
-                    st.write("Unable to load chart.")
+                    st.write("Chart error.")
