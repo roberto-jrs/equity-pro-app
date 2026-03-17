@@ -137,4 +137,4 @@ with st.sidebar:
         {"ticker": "BINANCE:BTCUSDT", "nome": "Bitcoin", "setor": "Cripto"}
     ]
     setores_lista = sorted(list(set([a['setor'] for a in ativos_db])))
-    filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key
+    filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
