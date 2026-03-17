@@ -291,23 +291,22 @@ for i, ativo in enumerate(ativos_f):
             st.write(f"{t['compra']} **{(invest_atual / taxa_c) / price if price > 0 else 0:.5f}**")
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
             
-           # --- EXPANDER PARA O GRÁFICO ---
+          # --- EXPANDER PARA O GRÁFICO (COLUNA MULTI-INDEX) ---
             with st.expander(f"📈 {t.get('historico', 'History')} / Chart"):
                 try:
-                    # Definimos o período com base no status que pegamos no topo
-                    # Se status_mercado for "ON", tentamos o dia atual
-                    if status_mercado == "ON":
-                        periodo_grafico = "1d"
-                        intervalo_grafico = "5m"
-                    else:
-                        periodo_grafico = "5d"
-                        intervalo_grafico = "60m"
+                    # Definimos o período
+                    periodo_grafico = "1d" if status_mercado == "ON" else "5d"
+                    intervalo_grafico = "5m" if status_mercado == "ON" else "60m"
                     
                     # Busca os dados
                     hist_data = yf.download(ticker, period=periodo_grafico, interval=intervalo_grafico, progress=False)
                     
                     if not hist_data.empty:
-                        # Criar o gráfico
+                        # --- CORREÇÃO AQUI: Remove o nível extra de colunas do Yahoo Finance ---
+                        if isinstance(hist_data.columns, pd.MultiIndex):
+                            hist_data.columns = hist_data.columns.get_level_values(0)
+                        
+                        # Agora o 'Close' existe sozinho
                         fig_in = px.line(
                             hist_data, 
                             y="Close", 
@@ -320,9 +319,11 @@ for i, ativo in enumerate(ativos_f):
                             xaxis_title="",
                             yaxis_title=""
                         )
+                        # Remove a legenda do eixo Y para o gráfico ficar mais limpo
+                        fig_in.update_yaxes(visible=True, showticklabels=True)
+                        
                         st.plotly_chart(fig_in, use_container_width=True, config={'displaylogo': False})
                     else:
-                        st.warning("Sem dados intraday disponíveis agora.")
+                        st.warning("Sem dados disponíveis agora.")
                 except Exception as e:
-                    # Isso vai te mostrar o erro real no console se algo der errado
                     st.error(f"Erro técnico: {e}")
