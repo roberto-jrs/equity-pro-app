@@ -313,22 +313,26 @@ for i, ativo in enumerate(ativos_f):
                         if isinstance(hist_data.columns, pd.MultiIndex):
                             hist_data.columns = hist_data.columns.get_level_values(0)
                         
-                        # Criando o gráfico
                         fig_in = px.line(hist_data, y="Close", template="plotly_dark", color_discrete_sequence=["#007bff"])
                         
-                        # --- LIMPEZA DOS TÍTULOS E LABELS ---
                         fig_in.update_layout(
                             margin=dict(l=0, r=0, t=10, b=10), 
                             height=180,
                             showlegend=False
                         )
                         
-                        # Remove apenas os títulos "Datetime" e "Close", mantendo os números/datas
-                        fig_in.update_xaxes(title=None, showgrid=False)
+                        # --- REMOVENDO O ANO E LIMPANDO O EIXO X ---
+                        fig_in.update_xaxes(
+                            title=None,
+                            showgrid=False,
+                            # Se for 1d, mostra Hora:Min. Se for 5d, mostra Dia/Mês. Sem o ano!
+                            tickformat="%H:%M" if periodo_grafico == "1d" else "%d/%m"
+                        )
+                        
                         fig_in.update_yaxes(title=None, showgrid=True, gridcolor="#333")
                         
                         st.plotly_chart(fig_in, use_container_width=True, config={'displaylogo': False})
                     else:
-                        st.warning("Dados indisponíveis no momento.")
+                        st.warning("Dados indisponíveis.")
                 except Exception as e:
                     st.error(f"Erro técnico: {e}")
