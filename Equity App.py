@@ -302,7 +302,7 @@ for i, ativo in enumerate(ativos_f):
                     if "BINANCE:" in ticker:
                         yf_ticker = ticker.replace("BINANCE:", "").replace("USDT", "-USD")
                     
-                    # 2. DEFINIÇÃO DO PERÍODO (Cripto ou Mercado OFF = 5 dias)
+                    # 2. DEFINIÇÃO DO PERÍODO (5 dias se mercado OFF ou Cripto)
                     is_crypto = "BINANCE" in ticker
                     periodo_grafico = "1d" if (status_mercado == "ON" and not is_crypto) else "5d"
                     intervalo_grafico = "5m" if periodo_grafico == "1d" else "60m"
@@ -310,13 +310,37 @@ for i, ativo in enumerate(ativos_f):
                     hist_data = yf.download(yf_ticker, period=periodo_grafico, interval=intervalo_grafico, progress=False)
                     
                     if not hist_data.empty:
+                        # Ajuste para colunas Multi-Index do Yahoo Finance
                         if isinstance(hist_data.columns, pd.MultiIndex):
                             hist_data.columns = hist_data.columns.get_level_values(0)
                         
-                        fig_in = px.line(hist_data, y="Close", template="plotly_dark")
-                        fig_in.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=180)
+                        # Criando o gráfico (Linha azul suave para combinar com o Equity Pro)
+                        fig_in = px.line(hist_data, y="Close", template="plotly_dark", color_discrete_sequence=["#007bff"])
+                        
+                        # --- LIMPEZA DOS TÍTULOS E LABELS ---
+                        fig_in.update_layout(
+                            margin=dict(l=0, r=0, t=10, b=20), # Espaço inferior para o '2026'
+                            height=180,
+                            showlegend=False
+                        )
+                        
+                        # Ajuste Eixo X: Remove "Datetime" e fixa no ano 2026
+                        fig_in.update_xaxes(
+                            title=None,
+                            tickformat="%Y", 
+                            nticks=1,        # Mantém apenas uma marcação (centralizada)
+                            showgrid=False
+                        )
+                        
+                        # Ajuste Eixo Y: Remove "Close" e mantém grade sutil
+                        fig_in.update_yaxes(
+                            title=None,
+                            showgrid=True,
+                            gridcolor="#333"
+                        )
+                        
                         st.plotly_chart(fig_in, use_container_width=True, config={'displaylogo': False})
                     else:
-                        st.warning("Dados indisponíveis para este período.")
+                        st.warning("Dados indisponíveis no momento.")
                 except Exception as e:
-                    st.error(f"Erro: {e}")
+                    st.error(f"Erro técnico: {e}")
