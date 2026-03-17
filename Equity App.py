@@ -10,10 +10,9 @@ from streamlit_autorefresh import st_autorefresh
 # --- CONFIGURAÇÃO ---
 st.set_page_config(page_title="Equity Pro - Terminal", layout="wide", page_icon="▣")
 
-# AUTO-REFRESH a cada 60 segundos
-st_autorefresh(interval=60000, key="equity_global_refresh")
+# (30.000 milissegundos = 30 segundos)
+st_autorefresh(interval=30000, key="equity_global_refresh")
 
-# Mantenha sua chave aqui (ou use st.secrets se for para o GitHub)
 FINNHUB_KEY = "d6p1sfhr01qk3chijap0d6p1sfhr01qk3chijapg" 
 finnhub_client = Client(api_key=FINNHUB_KEY)
 
@@ -85,21 +84,21 @@ idiomas = {
         "status_off": "MERCADO DE VALORES CERRADO (MOSTRANDO DATOS HISTÓRICOS)",
         "alocacao": "📊 Asignación de Activos",
         "terminal": "💡 Terminal de Acciones",
-        "monitor": "Monitorando activos del sector:",
+        "monitor": "Monitoreando activos del sector:",
         "info_cambio": "El tipo de cambio actual para la conversión es",
         "info_detalhe": "Todos los cálculos de fracciones de compra se procesan en tiempo real según el capital de",
         "compra": "Cantidad simulada:",
         "atualizar": "⟲ Atualizar Valores Globales",
         "historico": "HISTÓRICO",
         "subtitulo": "Estratégia y Claridad para el Mercado Global",
-        "ultima_at": "Última actualización:"
+        "ultima_at": "Última atualização:"
     }
 }
 
 def mudar_idioma():
     st.session_state.sel_idioma = st.session_state.idioma_temp
 
-# --- CSS PERSONALIZADO (Com as melhorias de hover e ícone) ---
+# --- CSS PERSONALIZADO ---
 st.markdown("""
     <style>
         button[data-testid="stSidebarCollapsedControl"]::after {
@@ -107,8 +106,8 @@ st.markdown("""
             font-size: 26px !important;
             display: block !important;
         }
-        .refresh-text { font-size: 0.8rem; color: #888; text-align: right; }
-        .stContainer { border: 1px solid #333; transition: transform 0.2s; border-radius: 10px; padding: 10px; }
+        .refresh-text { font-size: 0.8rem; color: #888; text-align: right; margin-bottom: 0; }
+        .stContainer { border: 1px solid #333; transition: transform 0.2s; border-radius: 10px; }
         .stContainer:hover { border-color: #007bff; transform: translateY(-3px); }
         [data-testid="stMetricValue"] { font-size: 1.8rem; }
     </style>
@@ -138,56 +137,4 @@ with st.sidebar:
         {"ticker": "BINANCE:BTCUSDT", "nome": "Bitcoin", "setor": "Cripto"}
     ]
     setores_lista = sorted(list(set([a['setor'] for a in ativos_db])))
-    filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
-
-# --- FUNÇÕES DE DADOS (MELHORADAS) ---
-@st.cache_data(ttl=3600)
-def get_rates():
-    try:
-        usd_brl = yf.download("USDBRL=X", period="1d", interval="1m", progress=False)['Close'].iloc[-1]
-        usd_eur = yf.download("EURUSD=X", period="1d", interval="1m", progress=False)['Close'].iloc[-1]
-        return float(usd_brl), float(usd_eur)
-    except:
-        return 5.15, 0.92
-
-brl_rate, eur_rate = get_rates()
-
-def converter(val):
-    if "BRL" in st.session_state.moeda_save: return val * brl_rate, "R$"
-    if "EUR" in st.session_state.moeda_save: return val * eur_rate, "€"
-    return val, "$"
-
-@st.cache_data(ttl=60)
-def get_safe_quote(ticker):
-    try: return finnhub_client.quote(ticker)
-    except: return {"c": 0, "pc": 0}
-
-def check_market_status():
-    ny_now = datetime.now(pytz.timezone('America/New_York'))
-    is_open = ny_now.weekday() < 5 and 9 <= ny_now.hour < 16
-    return ("ON", "#26a69a", t["status_on"]) if is_open else ("OFF", "#ef5350", t["status_off"])
-
-# --- RENDERIZAÇÃO ---
-st.title("EQUITY PRO")
-st.caption(t["subtitulo"])
-
-status_label, status_color, status_text = check_market_status()
-st.markdown(f"<div style='background-color:{status_color}; padding:10px; border-radius:5px; color:white; text-align:center;'>{status_text}</div>", unsafe_allow_html=True)
-
-st.divider()
-
-# Grid de ativos
-ativos_f = ativos_db if filtro_setor == t["todos"] else [a for a in ativos_db if a['setor'] == filtro_setor]
-cols = st.columns(3)
-
-for i, ativo in enumerate(ativos_f):
-    with cols[i % 3]:
-        q = get_safe_quote(ativo['ticker'])
-        preco = q.get('c', 0)
-        p_conv, simb = converter(preco)
-        
-        with st.container(border=True):
-            st.markdown(f"### {ativo['nome']}")
-            st.markdown(f"## {simb} {p_conv:,.2f}")
-            qtd_simulada = (investimento / (brl_rate if "BRL" in moeda else 1)) / preco if preco > 0 else 0
-            st.write(f"{t['compra']} **{qtd_simulada:.4f}**")
+    filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key
