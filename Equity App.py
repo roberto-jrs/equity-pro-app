@@ -11,28 +11,46 @@ import yfinance as yf
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 
-# --- CONFIGURAÇÃO ---
-status_label, _, _ = check_market_status() # Pegamos o status antes de tudo
+# --- 1. CONFIGURAÇÃO DE PÁGINA ---
+st.set_page_config(page_title="Equity Pro - Terminal", layout="wide", page_icon="▣")
 
-# Só ativa o refresh de 30s se o mercado estiver "ON"
-if status_label == "ON":
+# --- 2. DEFINIÇÃO DAS FUNÇÕES (Essencial vir antes de serem chamadas) ---
+
+def check_market_status():
+    """Verifica se a bolsa de NY está aberta."""
+    ny_now = datetime.now(pytz.timezone('America/New_York'))
+    is_weekday = ny_now.weekday() < 5 
+    # Horário de funcionamento: 9:30 às 16:00
+    is_hours = ny_now.hour >= 9 and (ny_now.hour < 16 or (ny_now.hour == 16 and ny_now.minute == 0))
+    if ny_now.hour == 9 and ny_now.minute < 30: is_hours = False
+    
+    # Retornamos uma tupla com (Status, Cor, Texto Traduzido)
+    # Nota: Usamos chaves genéricas aqui porque o dicionário 't' é definido depois na sidebar
+    if is_weekday and is_hours:
+        return "ON", "#26a69a"
+    else:
+        return "OFF", "#ef5350"
+
+# --- 3. LÓGICA DE REFRESH CONDICIONAL ---
+status_mercado, cor_status = check_market_status()
+
+if status_mercado == "ON":
+    # Atualiza a cada 30 segundos se aberto
     st_autorefresh(interval=30000, key="equity_global_refresh")
 else:
-    # Se estiver fechado, atualiza apenas a cada 10 minutos (ou remova se preferir estático)
+    # Atualiza a cada 10 minutos se fechado (apenas para manter o app vivo)
     st_autorefresh(interval=600000, key="equity_idle_refresh")
 
+# --- 4. CONFIGURAÇÕES DA API E MEMÓRIA ---
 FINNHUB_KEY = "d6p1sfhr01qk3chijap0d6p1sfhr01qk3chijapg" 
 finnhub_client = Client(api_key=FINNHUB_KEY)
 
-# --- INICIALIZAÇÃO DA MEMÓRIA ---
 if 'sel_idioma' not in st.session_state:
     st.session_state.sel_idioma = "English"
 if 'moeda_save' not in st.session_state:
     st.session_state.moeda_save = "USD ($)"
 if 'invest_save' not in st.session_state:
     st.session_state.invest_save = 0.00
-if 'setor_save' not in st.session_state:
-    st.session_state.setor_save = "Todos"
 if 'sel_fuso' not in st.session_state:
     st.session_state.sel_fuso = 'America/New_York'
 if 'live_data' not in st.session_state:
