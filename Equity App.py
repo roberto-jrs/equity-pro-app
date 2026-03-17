@@ -313,6 +313,12 @@ for i, ativo in enumerate(ativos_f):
                         if isinstance(hist_data.columns, pd.MultiIndex):
                             hist_data.columns = hist_data.columns.get_level_values(0)
                         
+                        # --- CONVERSÃO DE MOEDA NO GRÁFICO ---
+                        # Usamos a mesma taxa 'taxa_c' que você calculou para o preço principal
+                        taxa_c = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
+                        hist_data['Close'] = hist_data['Close'] * taxa_c
+                        
+                        # Criando o gráfico (agora com valor convertido)
                         fig_in = px.line(hist_data, y="Close", template="plotly_dark", color_discrete_sequence=["#007bff"])
                         
                         fig_in.update_layout(
@@ -321,11 +327,9 @@ for i, ativo in enumerate(ativos_f):
                             showlegend=False
                         )
                         
-                        # --- REMOVENDO O ANO E LIMPANDO O EIXO X ---
                         fig_in.update_xaxes(
                             title=None,
                             showgrid=False,
-                            # Se for 1d, mostra Hora:Min. Se for 5d, mostra Dia/Mês. Sem o ano!
                             tickformat="%H:%M" if periodo_grafico == "1d" else "%d/%m"
                         )
                         
