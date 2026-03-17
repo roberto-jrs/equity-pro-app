@@ -14,8 +14,8 @@ from streamlit_autorefresh import st_autorefresh
 # --- CONFIGURAÇÃO ---
 st.set_page_config(page_title="Equity Pro - Terminal", layout="wide", page_icon="▣")
 
-# AUTO-REFRESH a cada 5 segundos (Conforme solicitado)
-st_autorefresh(interval=5000, key="equity_global_refresh")
+# AUTO-REFRESH a cada 30 segundos (Conforme solicitado)
+st_autorefresh(interval=30000, key="equity_global_refresh")
 
 FINNHUB_KEY = "d6p1sfhr01qk3chijap0d6p1sfhr01qk3chijapg" 
 finnhub_client = Client(api_key=FINNHUB_KEY)
