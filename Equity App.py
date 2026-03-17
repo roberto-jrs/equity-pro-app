@@ -291,19 +291,38 @@ for i, ativo in enumerate(ativos_f):
             st.write(f"{t['compra']} **{(invest_atual / taxa_c) / price if price > 0 else 0:.5f}**")
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
             
-            # --- EXPANDER PARA O GRÁFICO (AGORA COM INDENTAÇÃO CORRETA) ---
-            with st.expander(f"📈 {t['historico']} / Chart"):
+           # --- EXPANDER PARA O GRÁFICO ---
+            with st.expander(f"📈 {t.get('historico', 'History')} / Chart"):
                 try:
-                    # Se mercado ON: hoje (1d). Se mercado OFF: últimos 5 dias (5d)
-                    periodo = "1d" if status_label == "ON" else "5d"
-                    intervalo = "5m" if status_label == "ON" else "60m"
+                    # Definimos o período com base no status que pegamos no topo
+                    # Se status_mercado for "ON", tentamos o dia atual
+                    if status_mercado == "ON":
+                        periodo_grafico = "1d"
+                        intervalo_grafico = "5m"
+                    else:
+                        periodo_grafico = "5d"
+                        intervalo_grafico = "60m"
                     
-                    hist_data = yf.download(ticker, period=periodo, interval=intervalo, progress=False)
+                    # Busca os dados
+                    hist_data = yf.download(ticker, period=periodo_grafico, interval=intervalo_grafico, progress=False)
+                    
                     if not hist_data.empty:
-                        fig_in = px.line(hist_data, y="Close", template="plotly_dark")
-                        fig_in.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=150)
+                        # Criar o gráfico
+                        fig_in = px.line(
+                            hist_data, 
+                            y="Close", 
+                            title=f"{ticker} - {periodo_grafico}",
+                            template="plotly_dark"
+                        )
+                        fig_in.update_layout(
+                            margin=dict(l=0, r=0, t=30, b=0), 
+                            height=200,
+                            xaxis_title="",
+                            yaxis_title=""
+                        )
                         st.plotly_chart(fig_in, use_container_width=True, config={'displaylogo': False})
                     else:
-                        st.write("Awaiting data...")
-                except:
-                    st.write("Chart error.")
+                        st.warning("Sem dados intraday disponíveis agora.")
+                except Exception as e:
+                    # Isso vai te mostrar o erro real no console se algo der errado
+                    st.error(f"Erro técnico: {e}")
