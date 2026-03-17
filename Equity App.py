@@ -271,7 +271,7 @@ for i, ativo in enumerate(ativos_f):
         
         label_status = ""
         if status_label == "OFF": 
-            label_status = t["historico"]
+            label_status = t.get("historico", "HISTÓRICO")
         elif data: 
             label_status = "LIVE"
 
@@ -294,33 +294,29 @@ for i, ativo in enumerate(ativos_f):
             st.write(f"{t['compra']} **{(invest_atual / taxa_c) / price if price > 0 else 0:.5f}**")
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
             
-            # --- EXPANDER PARA O GRÁFICO (NOME ATUALIZADO E INDENTAÇÃO CORRETA) ---
+            # --- EXPANDER PARA O GRÁFICO (SOLUÇÃO DEFINITIVA) ---
             with st.expander(f"📈 {t.get('grafico_h', 'Gráfico Histórico')}"):
                 try:
-                    periodo_grafico = "1d" if status_mercado == "ON" else "5d"
-                    intervalo_grafico = "5m" if status_mercado == "ON" else "60m"
+                    # 1. TRADUÇÃO DO TICKER PARA O GRÁFICO
+                    yf_ticker = ticker
+                    if "BINANCE:" in ticker:
+                        yf_ticker = ticker.replace("BINANCE:", "").replace("USDT", "-USD")
                     
-                    hist_data = yf.download(ticker, period=periodo_grafico, interval=intervalo_grafico, progress=False)
+                    # 2. DEFINIÇÃO DO PERÍODO (Cripto ou Mercado OFF = 5 dias)
+                    is_crypto = "BINANCE" in ticker
+                    periodo_grafico = "1d" if (status_mercado == "ON" and not is_crypto) else "5d"
+                    intervalo_grafico = "5m" if periodo_grafico == "1d" else "60m"
+                    
+                    hist_data = yf.download(yf_ticker, period=periodo_grafico, interval=intervalo_grafico, progress=False)
                     
                     if not hist_data.empty:
                         if isinstance(hist_data.columns, pd.MultiIndex):
                             hist_data.columns = hist_data.columns.get_level_values(0)
                         
-                        fig_in = px.line(
-                            hist_data, 
-                            y="Close", 
-                            title=f"{ticker} - {periodo_grafico}",
-                            template="plotly_dark"
-                        )
-                        fig_in.update_layout(
-                            margin=dict(l=0, r=0, t=30, b=0), 
-                            height=200,
-                            xaxis_title="",
-                            yaxis_title=""
-                        )
-                        fig_in.update_yaxes(visible=True, showticklabels=True)
+                        fig_in = px.line(hist_data, y="Close", template="plotly_dark")
+                        fig_in.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=180)
                         st.plotly_chart(fig_in, use_container_width=True, config={'displaylogo': False})
                     else:
-                        st.warning("Sem dados disponíveis agora.")
+                        st.warning("Dados indisponíveis para este período.")
                 except Exception as e:
-                    st.error(f"Erro técnico: {e}")
+                    st.error(f"Erro: {e}")
