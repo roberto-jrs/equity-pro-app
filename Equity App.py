@@ -335,7 +335,7 @@ for i, ativo in enumerate(ativos_f):
                         
                         fig_in.update_yaxes(title=None, showgrid=True, gridcolor="#333")
                         
-                        st.plotly_chart(fig_in, use_container_width=True, config={'displaylogo': False})
+                        st.plotly_chart(fig_in, use_container_width=True, config={'displayModeBar': False, 'displaylogo': False})
                     else:
                         st.warning("Dados indisponíveis.")
                 except Exception as e:
