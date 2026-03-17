@@ -12,10 +12,14 @@ import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 
 # --- CONFIGURAÇÃO ---
-st.set_page_config(page_title="Equity Pro - Terminal", layout="wide", page_icon="▣")
+status_label, _, _ = check_market_status() # Pegamos o status antes de tudo
 
-# AUTO-REFRESH a cada 30 segundos (Conforme solicitado)
-st_autorefresh(interval=30000, key="equity_global_refresh")
+# Só ativa o refresh de 30s se o mercado estiver "ON"
+if status_label == "ON":
+    st_autorefresh(interval=30000, key="equity_global_refresh")
+else:
+    # Se estiver fechado, atualiza apenas a cada 10 minutos (ou remova se preferir estático)
+    st_autorefresh(interval=600000, key="equity_idle_refresh")
 
 FINNHUB_KEY = "d6p1sfhr01qk3chijap0d6p1sfhr01qk3chijapg" 
 finnhub_client = Client(api_key=FINNHUB_KEY)
@@ -267,15 +271,19 @@ for i, ativo in enumerate(ativos_f):
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
             
             # --- EXPANDER PARA O GRÁFICO (Dentro do card) ---
-            with st.expander(f"📈 {t['historico']} / Chart"):
+           with st.expander(f"📈 {t['historico']} / Chart"):
                 try:
-                    # '1d' traz o dia atual, '5m' é o intervalo
-                    hist_data = yf.download(ticker, period="1d", interval="5m", progress=False)
+                    # Se mercado ON: pega hoje (1d) em 5min. Se mercado OFF: pega 5 dias (5d) em 1h.
+                    periodo = "1d" if status_label == "ON" else "5d"
+                    intervalo = "5m" if status_label == "ON" else "60m"
+                    
+                    hist_data = yf.download(ticker, period=periodo, interval=intervalo, progress=False)
+                    
                     if not hist_data.empty:
                         fig_in = px.line(hist_data, y="Close", template="plotly_dark")
                         fig_in.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=150)
                         st.plotly_chart(fig_in, use_container_width=True, config={'displaylogo': False})
                     else:
-                        st.write("No intraday data yet.")
+                        st.write("Market data currently unavailable.")
                 except:
                     st.write("Unable to load chart.")
