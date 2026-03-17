@@ -14,23 +14,25 @@ from streamlit_autorefresh import st_autorefresh
 # --- CONFIGURAÇÃO ---
 st.set_page_config(page_title="Equity Pro - Terminal", layout="wide", page_icon="▣")
 
-# AUTO-REFRESH a cada 30 segundos
-st_autorefresh(interval=30000, key="equity_global_refresh")
+# AUTO-REFRESH a cada 5 segundos (Conforme solicitado)
+st_autorefresh(interval=5000, key="equity_global_refresh")
 
 FINNHUB_KEY = "d6p1sfhr01qk3chijap0d6p1sfhr01qk3chijapg" 
 finnhub_client = Client(api_key=FINNHUB_KEY)
 
 # --- INICIALIZAÇÃO DA MEMÓRIA ---
-if 'live_data' not in st.session_state:
-    st.session_state.live_data = {}
+if 'sel_idioma' not in st.session_state:
+    st.session_state.sel_idioma = "English"
 if 'moeda_save' not in st.session_state:
     st.session_state.moeda_save = "USD ($)"
 if 'invest_save' not in st.session_state:
     st.session_state.invest_save = 0.00
 if 'setor_save' not in st.session_state:
     st.session_state.setor_save = "Todos"
-if 'sel_idioma' not in st.session_state:
-    st.session_state.sel_idioma = "Português (BR)"
+if 'sel_fuso' not in st.session_state:
+    st.session_state.sel_fuso = 'America/New_York'
+if 'live_data' not in st.session_state:
+    st.session_state.live_data = {}
 
 # --- DICIONÁRIO DE TRADUÇÃO ---
 idiomas = {
@@ -92,7 +94,7 @@ idiomas = {
         "info_cambio": "El tipo de cambio actual para la conversión es",
         "info_detalhe": "Todos los cálculos de fracciones de compra se procesan en tiempo real según el capital de",
         "compra": "Cantidad simulada:",
-        "atualizar": "⟲ Actualizar Valores Globales",
+        "atualizar": "⟲ Atualizar Valores Globales",
         "historico": "HISTÓRICO",
         "subtitulo": "Estrategia y Claridad para el Mercado Global",
         "ultima_at": "Última actualización:"
@@ -105,33 +107,18 @@ def mudar_idioma():
 # --- CSS PERSONALIZADO ---
 st.markdown("""
     <style>
-        /* 1. SELECIONA O BOTÃO DE ABRIR (SETINHAS) E APLICA A ENGRENAGEM */
-        button[data-testid="stSidebarCollapsedControl"] svg {
-            display: none !important;
-        }
-        
+        button[data-testid="stSidebarCollapsedControl"] svg { display: none !important; }
         button[data-testid="stSidebarCollapsedControl"]::after {
             content: "⚙️";
             font-size: 26px !important;
             display: block !important;
         }
-
-        /* 2. ESTILO DO TEXTO DE ATUALIZAÇÃO NO TOPO */
-        .refresh-text { 
-            font-size: 0.8rem; 
-            color: #888; 
-            text-align: right; 
-            margin-bottom: 0; 
-        }
-
-        /* 3. OPCIONAL: Remove aquela linha extra que às vezes o Streamlit cria no topo */
-        header[data-testid="stHeader"] {
-            background-color: rgba(0,0,0,0) !important;
-        }
+        .refresh-text { font-size: 0.8rem; color: #888; text-align: right; margin-bottom: 0; }
+        header[data-testid="stHeader"] { background-color: rgba(0,0,0,0) !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- SIDEBAR (CONFIGURAÇÕES) ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.header(idiomas[st.session_state.sel_idioma]["titulo_idioma"])
     st.selectbox(
@@ -145,16 +132,10 @@ with st.sidebar:
     st.divider()
     
     st.header(t["config"])
-    
-    # SELETOR DE FUSO HORÁRIO
-    fusos_lista = ['America/Sao_Paulo', 'America/New_York', 'Europe/London', 'Europe/Paris', 'Asia/Tokyo', 'UTC']
-    sel_fuso = st.selectbox(t["fuso"], fusos_lista, index=0)
-    
-    moeda = st.selectbox(t["moeda"], ["USD ($)", "BRL (R$)", "EUR (€)"], key="moeda_selector")
-    st.session_state.moeda_save = moeda
-    
-    investimento = st.number_input(t["capital"], min_value=0.0, value=st.session_state.invest_save, step=500.0, key="invest_selector")
-    st.session_state.invest_save = investimento
+    fusos_lista = ['America/New_York', 'America/Sao_Paulo', 'Europe/London', 'Europe/Paris', 'Asia/Tokyo', 'UTC']
+    st.selectbox(t["fuso"], fusos_lista, key='sel_fuso')
+    st.selectbox(t["moeda"], ["USD ($)", "BRL (R$)", "EUR (€)"], key="moeda_save")
+    st.number_input(t["capital"], min_value=0.0, step=500.0, key="invest_save")
     
     ativos_db = [
         {"ticker": "AAPL", "nome": "Apple Inc.", "setor": "Tecnologia"},
@@ -178,9 +159,9 @@ with st.sidebar:
 
 # --- FUNÇÕES DE DADOS ---
 def get_now_local():
-    return datetime.now(pytz.utc).astimezone(pytz.timezone(sel_fuso))
+    return datetime.now(pytz.utc).astimezone(pytz.timezone(st.session_state.sel_fuso))
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=5) # Reduzido para 5s para acompanhar o refresh
 def get_safe_quote(ticker):
     try: return finnhub_client.quote(ticker)
     except: return {"c": 0, "pc": 0}
@@ -225,7 +206,6 @@ c_top1, c_top2 = st.columns([3, 1])
 with c_top2:
     if st.button(t["atualizar"], use_container_width=True):
         st.rerun()
-    # EXIBE O HORÁRIO BASEADO NO FUSO ESCOLHIDO
     st.markdown(f"<p class='refresh-text'>{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
 
 status_label, status_color, status_text = check_market_status()
@@ -244,17 +224,17 @@ with col_stats1:
 with col_stats2:
     st.subheader(t["terminal"])
     st.write(f"{t['monitor']} **{filtro_setor}**")
-    taxa_ex = brl_rate if "BRL" in moeda else (eur_rate if "EUR" in moeda else 1.0)
-    simb_m = "BRL" if "BRL" in moeda else ("EUR" if "EUR" in moeda else "USD")
-    st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {moeda}.")
+    taxa_ex = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
+    simb_m = "BRL" if "BRL" in st.session_state.moeda_save else ("EUR" if "EUR" in st.session_state.moeda_save else "USD")
+    st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {st.session_state.moeda_save}.")
 
 st.divider()
 ativos_f = ativos_db if filtro_setor == t["todos"] else [a for a in ativos_db if a['setor'] == filtro_setor]
 cols = st.columns(3)
 
 def converter(val):
-    if "BRL" in moeda: return val * brl_rate, "R$"
-    if "EUR" in moeda: return val * eur_rate, "€"
+    if "BRL" in st.session_state.moeda_save: return val * brl_rate, "R$"
+    if "EUR" in st.session_state.moeda_save: return val * eur_rate, "€"
     return val, "$"
 
 for i, ativo in enumerate(ativos_f):
@@ -280,6 +260,22 @@ for i, ativo in enumerate(ativos_f):
                 cs.markdown(f"<span style='background:{'#26a69a' if label_status=='LIVE' else '#546e7a'}; color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;'>{label_status}</span>", unsafe_allow_html=True)
             st.markdown(f"### {simb} {p_conv:,.2f}")
             st.markdown(f"<p style='color:{'#26a69a' if var >= 0 else '#ef5350'}; font-weight:bold; margin-top:-15px;'>{'▲' if var >= 0 else '▼'} {var:.2f}%</p>", unsafe_allow_html=True)
-            taxa_c = brl_rate if "BRL" in moeda else (eur_rate if "EUR" in moeda else 1)
-            st.write(f"{t['compra']} **{(investimento / taxa_c) / price if price > 0 else 0:.5f}**")
+            
+            taxa_c = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1)
+            invest_atual = st.session_state.invest_save
+            st.write(f"{t['compra']} **{(invest_atual / taxa_c) / price if price > 0 else 0:.5f}**")
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
+            
+            # --- EXPANDER PARA O GRÁFICO (Dentro do card) ---
+            with st.expander(f"📈 {t['historico']} / Chart"):
+                try:
+                    # '1d' traz o dia atual, '5m' é o intervalo
+                    hist_data = yf.download(ticker, period="1d", interval="5m", progress=False)
+                    if not hist_data.empty:
+                        fig_in = px.line(hist_data, y="Close", template="plotly_dark")
+                        fig_in.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=150)
+                        st.plotly_chart(fig_in, use_container_width=True, config={'displaylogo': False})
+                    else:
+                        st.write("No intraday data yet.")
+                except:
+                    st.write("Unable to load chart.")
