@@ -1,11 +1,12 @@
+
 import streamlit as st
 import pandas as pd
 import websocket
 import json
 import threading
-import time  
+import time  # Este é o módulo de tempo do sistema
 from finnhub import Client
-from datetime import datetime, timedelta, time as dt_time 
+from datetime import datetime, time as dt_time # Importamos o 'time' do datetime com apelido
 import pytz 
 import yfinance as yf
 import plotly.express as px
@@ -311,65 +312,64 @@ for i, ativo in enumerate(ativos_f):
             st.write(f"{t['compra']} **{(invest_atual / taxa_c) / price if price > 0 else 0:.5f}**")
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
             
-         # --- EXPANDER PARA O GRÁFICO (EQUITY PRO) ---
-with st.expander(f"📈 {t.get('grafico_h', 'Gráfico Histórico')}", expanded=st.session_state.show_all_charts):
-    try:
-        yf_ticker = ticker
-        if "BINANCE:" in ticker:
-            yf_ticker = ticker.replace("BINANCE:", "").replace("USDT", "-USD")
-        
-        is_crypto = "BINANCE" in ticker
-        ny_now = datetime.now(pytz.timezone('America/New_York'))
-        
-        # Criamos uma "memória" para saber se o usuário clicou em "Ver Hoje" para ESTA ação específica
-        key_ver_hoje = f"ver_hoje_{ticker}"
-        if key_ver_hoje not in st.session_state:
-            st.session_state[key_ver_hoje] = False
-
-        # --- LÓGICA DE DECISÃO DO GRÁFICO ---
-        if status_mercado == "ON" or is_crypto:
-            # MERCADO ABERTO: Sempre 1 dia, 5 min
-            periodo, intervalo, cor = "1d", "5m", "#26a69a"
-            st.session_state[key_ver_hoje] = False # Reseta o botão se o mercado abrir
-        else:
-            # MERCADO FECHADO: Padrão é Histórico (5 dias, 60 min)
-            periodo, intervalo, cor = "5d", "60m", "#007bff"
-            
-            # APARECE O BOTÃO SÓ APÓS O FECHAMENTO (16h NY)
-            if not is_crypto and ny_now.hour >= 16:
-                label_btn = "📊 Ver Resumo do Pregão de Hoje" if not st.session_state[key_ver_hoje] else "🔙 Voltar ao Histórico"
-                if st.button(label_btn, key=f"btn_{ticker}"):
-                    st.session_state[key_ver_hoje] = not st.session_state[key_ver_hoje]
-                    st.rerun()
-                
-                # Se o botão foi clicado, trocamos os dados para o dia de hoje
-                if st.session_state[key_ver_hoje]:
-                    periodo, intervalo, cor = "1d", "5m", "#26a69a"
-
-        # --- DOWNLOAD E PLOTAGEM ---
-        hist_data = yf.download(yf_ticker, period=periodo, interval=intervalo, progress=False)
-
-        if not hist_data.empty:
-            if isinstance(hist_data.columns, pd.MultiIndex):
-                hist_data.columns = hist_data.columns.get_level_values(0)
-            
-            # Ajuste de Fuso e Moeda
-            user_tz = pytz.timezone(st.session_state.sel_fuso)
-            hist_data.index = hist_data.index.tz_convert(user_tz)
-            taxa_c = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
-            hist_data['Close'] = hist_data['Close'] * taxa_c
-            
-            # Gráfico Plotly
-            fig_in = px.line(hist_data, y="Close", template="plotly_dark", color_discrete_sequence=[cor])
-            fig_in.update_layout(margin=dict(l=0, r=0, t=10, b=10), height=180, showlegend=False)
-            
-            # Eixo X dinâmico (Se for 1d, mostra 10 em 10 min)
-            if periodo == "1d":
-                fig_in.update_xaxes(title=None, showgrid=False, tickformat="%H:%M", dtick=600000, tickangle=0)
-            else:
-                fig_in.update_xaxes(title=None, showgrid=False, tickformat="%d/%m %H:%M")
-            
-            st.plotly_chart(fig_in, use_container_width=True, config={'displayModeBar': False, 'displaylogo': False})
-    
-    except Exception as e:
-        st.error(f"Erro: {e}")
+            # --- EXPANDER PARA O GRÁFICO ---
+            # O 'expanded' agora obedece ao estado global do botão de abrir/fechar tudo
+            with st.expander(f"📈 {t.get('grafico_h', 'Gráfico Histórico')}", expanded=st.session_state.show_all_charts):
+                try:
+                    # 1. TRADUÇÃO DO TICKER PARA O GRÁFICO
+                    yf_ticker = ticker
+                    if "BINANCE:" in ticker:
+                        yf_ticker = ticker.replace("BINANCE:", "").replace("USDT", "-USD")
+                    
+                    # 2. DEFINIÇÃO DO PERÍODO
+                    is_crypto = "BINANCE" in ticker
+                    periodo_grafico = "1d" if (status_mercado == "ON" and not is_crypto) else "5d"
+                    intervalo_grafico = "5m" if periodo_grafico == "1d" else "60m"
+                    
+                    hist_data = yf.download(yf_ticker, period=periodo_grafico, interval=intervalo_grafico, progress=False)
+                    
+                    if not hist_data.empty:
+                        if isinstance(hist_data.columns, pd.MultiIndex):
+                            hist_data.columns = hist_data.columns.get_level_values(0)
+                        
+                        # --- FUSO HORÁRIO NO GRÁFICO ---
+                        # Converte as horas do gráfico para o fuso que você selecionou no Sidebar
+                        user_tz = pytz.timezone(st.session_state.sel_fuso)
+                        hist_data.index = hist_data.index.tz_convert(user_tz)
+                        
+                        # --- CONVERSÃO DE MOEDA NO GRÁFICO ---
+                        taxa_c = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
+                        hist_data['Close'] = hist_data['Close'] * taxa_c
+                        
+                        # Criando o gráfico
+                        fig_in = px.line(hist_data, y="Close", template="plotly_dark", color_discrete_sequence=["#007bff"])
+                        
+                        fig_in.update_layout(
+                            margin=dict(l=0, r=0, t=10, b=10), 
+                            height=180,
+                            showlegend=False
+                        )
+                        
+                        # --- NOVO: LÓGICA DE ATUALIZAÇÃO DO EIXO X (10 EM 10 MIN) ---
+                        if periodo_grafico == "1d" and not is_crypto:
+                            fig_in.update_xaxes(
+                                title=None,
+                                showgrid=False,
+                                tickformat="%H:%M",
+                                dtick=600000, # 600.000ms = 10 minutos
+                                tickangle=0
+                            )
+                        else:
+                            fig_in.update_xaxes(
+                                title=None,
+                                showgrid=False,
+                                tickformat="%H:%M" if periodo_grafico == "1d" else "%d/%m"
+                            )
+                        
+                        fig_in.update_yaxes(title=None, showgrid=True, gridcolor="#333")
+                        
+                        st.plotly_chart(fig_in, use_container_width=True, config={'displayModeBar': False, 'displaylogo': False})
+                    else:
+                        st.warning("Dados indisponíveis.")
+                except Exception as e:
+                    st.error(f"Erro técnico: {e}")
