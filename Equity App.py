@@ -90,8 +90,8 @@ idiomas = {
         "subtitulo": "Strategy and Clarity for the Global Market",
         "ultima_at": "Last update:",
         "grafico_h": "Historical Chart",
-        "btn_expandir": "📖 Expand Charts",
-        "btn_recolher": "📕 Collapse Charts",
+        "btn_expandir": "📈 Expand Charts",
+        "btn_recolher": "📈 Collapse Charts",
         "help_graficos": "Expand/Collapse all charts"
     },
     "Português (BR)": {
@@ -115,8 +115,8 @@ idiomas = {
         "subtitulo": "Estratégia e Clareza para o Mercado Global",
         "ultima_at": "Última atualização:",
         "grafico_h": "Gráfico Histórico",
-        "btn_expandir": "📖 Expandir Gráficos",
-        "btn_recolher": "📕 Recolher Gráficos",
+        "btn_expandir": "📈 Expandir Gráficos",
+        "btn_recolher": "📈 Recolher Gráficos",
         "help_graficos": "Expandir/Recolher todos os gráficos"
     },
     "Español": {
@@ -140,8 +140,8 @@ idiomas = {
         "subtitulo": "Estrategia y Claridad para el Mercado Global",
         "ultima_at": "Última actualización:",
         "grafico_h": "Gráfico Histórico",
-        "btn_expandir": "📖 Expandir Gráficos",
-        "btn_recolher": "📕 Contraer Gráficos",
+        "btn_expandir": "📈 Expandir Gráficos",
+        "btn_recolher": "📈 Contraer Gráficos",
         "help_graficos": "Expandir/Contraer todos los gráficos"
     }
 }
