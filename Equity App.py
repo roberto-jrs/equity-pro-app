@@ -243,7 +243,7 @@ with c_top2:
             st.rerun()
     with col_btn2:
         # Botão que alterna entre mostrar/esconder todos os gráficos
-        label_btn = "📖" if not st.session_state.show_all_charts else "📕"
+        label_btn = "📖 Expandir Gráficos" if not st.session_state.show_all_charts else "📕 Recolher Gráficos"
         if st.button(label_btn, use_container_width=True, help="Expandir/Recolher todos os gráficos"):
             st.session_state.show_all_charts = not st.session_state.show_all_charts
             st.rerun()
