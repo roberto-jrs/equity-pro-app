@@ -252,9 +252,11 @@ with c_top2:
         if st.button(t["atualizar"], use_container_width=True):
             st.rerun()
     with col_btn2:
-        # Botão que alterna entre mostrar/esconder todos os gráficos
-        label_btn = "📈 Expandir Gráficos" if not st.session_state.show_all_charts else "📈 Recolher Gráficos"
-        if st.button(label_btn, use_container_width=True, help="Expandir/Recolher todos os gráficos"):
+        # Agora o label busca dinamicamente do dicionário 't'
+        label_btn = t["btn_exp"] if not st.session_state.show_all_charts else t["btn_rec"]
+        
+        # O 'help' também pode ser traduzido se você adicionar uma chave para ele
+        if st.button(label_btn, use_container_width=True):
             st.session_state.show_all_charts = not st.session_state.show_all_charts
             st.rerun()
             
