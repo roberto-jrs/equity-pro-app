@@ -311,7 +311,7 @@ for i, ativo in enumerate(ativos_f):
             st.write(f"{t['compra']} **{(invest_atual / taxa_c) / price if price > 0 else 0:.5f}**")
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
             
-          # --- EXPANDER PARA O GRÁFICO (LÓGICA HÍBRIDA EQUITY PRO) ---
+         # --- EXPANDER PARA O GRÁFICO (EQUITY PRO) ---
 with st.expander(f"📈 {t.get('grafico_h', 'Gráfico Histórico')}", expanded=st.session_state.show_all_charts):
     try:
         yf_ticker = ticker
@@ -321,32 +321,32 @@ with st.expander(f"📈 {t.get('grafico_h', 'Gráfico Histórico')}", expanded=s
         is_crypto = "BINANCE" in ticker
         ny_now = datetime.now(pytz.timezone('America/New_York'))
         
-        # --- 1. CONFIGURAÇÃO PADRÃO (HISTÓRICO) ---
-        periodo = "5d"
-        intervalo = "60m"
-        cor_grafico = "#007bff" # Azul
-        label_eixo_x = "%d/%m %H:%M"
-        usar_dtick = False
+        # Criamos uma "memória" para saber se o usuário clicou em "Ver Hoje" para ESTA ação específica
+        key_ver_hoje = f"ver_hoje_{ticker}"
+        if key_ver_hoje not in st.session_state:
+            st.session_state[key_ver_hoje] = False
 
-        # --- 2. SE O MERCADO ESTIVER ABERTO (OU FOR CRIPTO) ---
+        # --- LÓGICA DE DECISÃO DO GRÁFICO ---
         if status_mercado == "ON" or is_crypto:
-            periodo = "1d"
-            intervalo = "5m"
-            cor_grafico = "#26a69a" # Verde
-            label_eixo_x = "%H:%M"
-            usar_dtick = True
-        
-        # --- 3. SE O MERCADO FECHOU (BOTÃO DE RESUMO DO DIA) ---
-        elif not is_crypto and ny_now.hour >= 16:
-            # O botão aparece aqui, logo acima do gráfico histórico
-            if st.button(f"🔍 Ver detalhes do pregão de hoje", key=f"btn_today_{ticker}", use_container_width=True):
-                periodo = "1d"
-                intervalo = "5m"
-                cor_grafico = "#26a69a"
-                label_eixo_x = "%H:%M"
-                usar_dtick = True
+            # MERCADO ABERTO: Sempre 1 dia, 5 min
+            periodo, intervalo, cor = "1d", "5m", "#26a69a"
+            st.session_state[key_ver_hoje] = False # Reseta o botão se o mercado abrir
+        else:
+            # MERCADO FECHADO: Padrão é Histórico (5 dias, 60 min)
+            periodo, intervalo, cor = "5d", "60m", "#007bff"
+            
+            # APARECE O BOTÃO SÓ APÓS O FECHAMENTO (16h NY)
+            if not is_crypto and ny_now.hour >= 16:
+                label_btn = "📊 Ver Resumo do Pregão de Hoje" if not st.session_state[key_ver_hoje] else "🔙 Voltar ao Histórico"
+                if st.button(label_btn, key=f"btn_{ticker}"):
+                    st.session_state[key_ver_hoje] = not st.session_state[key_ver_hoje]
+                    st.rerun()
+                
+                # Se o botão foi clicado, trocamos os dados para o dia de hoje
+                if st.session_state[key_ver_hoje]:
+                    periodo, intervalo, cor = "1d", "5m", "#26a69a"
 
-        # --- 4. DOWNLOAD E PROCESSAMENTO ---
+        # --- DOWNLOAD E PLOTAGEM ---
         hist_data = yf.download(yf_ticker, period=periodo, interval=intervalo, progress=False)
 
         if not hist_data.empty:
@@ -359,20 +359,17 @@ with st.expander(f"📈 {t.get('grafico_h', 'Gráfico Histórico')}", expanded=s
             taxa_c = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
             hist_data['Close'] = hist_data['Close'] * taxa_c
             
-            # Criar Gráfico
-            fig_in = px.line(hist_data, y="Close", template="plotly_dark", color_discrete_sequence=[cor_grafico])
+            # Gráfico Plotly
+            fig_in = px.line(hist_data, y="Close", template="plotly_dark", color_discrete_sequence=[cor])
             fig_in.update_layout(margin=dict(l=0, r=0, t=10, b=10), height=180, showlegend=False)
             
-            # Configuração do Eixo X
-            if usar_dtick:
-                fig_in.update_xaxes(title=None, showgrid=False, tickformat=label_eixo_x, dtick=600000, tickangle=0)
+            # Eixo X dinâmico (Se for 1d, mostra 10 em 10 min)
+            if periodo == "1d":
+                fig_in.update_xaxes(title=None, showgrid=False, tickformat="%H:%M", dtick=600000, tickangle=0)
             else:
-                fig_in.update_xaxes(title=None, showgrid=False, tickformat=label_eixo_x)
+                fig_in.update_xaxes(title=None, showgrid=False, tickformat="%d/%m %H:%M")
             
-            fig_in.update_yaxes(title=None, showgrid=True, gridcolor="#333")
             st.plotly_chart(fig_in, use_container_width=True, config={'displayModeBar': False, 'displaylogo': False})
-        else:
-            st.info("Carregando dados consolidados...")
-
+    
     except Exception as e:
-        st.error(f"Erro no terminal: {e}")
+        st.error(f"Erro: {e}")
