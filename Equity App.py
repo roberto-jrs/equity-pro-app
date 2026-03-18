@@ -54,6 +54,8 @@ finnhub_client = Client(api_key=FINNHUB_KEY)
 
 if 'sel_idioma' not in st.session_state:
     st.session_state.sel_idioma = "English"
+if 'setor_selector' not in st.session_state:
+    st.session_state.setor_selector = "All"
 if 'moeda_save' not in st.session_state:
     st.session_state.moeda_save = "USD ($)"
 if 'invest_save' not in st.session_state:
