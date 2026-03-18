@@ -61,6 +61,8 @@ if 'sel_fuso' not in st.session_state:
     st.session_state.sel_fuso = 'America/New_York'
 if 'live_data' not in st.session_state:
     st.session_state.live_data = {}
+if 'show_all_charts' not in st.session_state:
+    st.session_state.show_all_charts = False
 
 # --- DICIONÁRIO DE TRADUÇÃO ---
 idiomas = {
@@ -235,8 +237,17 @@ render_logo_jr()
 
 c_top1, c_top2 = st.columns([3, 1])
 with c_top2:
-    if st.button(t["atualizar"], use_container_width=True):
-        st.rerun()
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button(t["atualizar"], use_container_width=True):
+            st.rerun()
+    with col_btn2:
+        # Botão que alterna entre mostrar/esconder todos os gráficos
+        label_btn = "📖" if not st.session_state.show_all_charts else "📕"
+        if st.button(label_btn, use_container_width=True, help="Expandir/Recolher todos os gráficos"):
+            st.session_state.show_all_charts = not st.session_state.show_all_charts
+            st.rerun()
+            
     st.markdown(f"<p class='refresh-text'>{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
 
 status_label, status_color, status_text = check_market_status()
@@ -300,8 +311,9 @@ for i, ativo in enumerate(ativos_f):
             st.write(f"{t['compra']} **{(invest_atual / taxa_c) / price if price > 0 else 0:.5f}**")
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
             
-            # --- EXPANDER PARA O GRÁFICO (SOLUÇÃO DEFINITIVA) ---
-            with st.expander(f"📈 {t.get('grafico_h', 'Gráfico Histórico')}"):
+            # --- EXPANDER PARA O GRÁFICO ---
+            # O 'expanded' agora obedece ao estado global do botão de abrir/fechar tudo
+            with st.expander(f"📈 {t.get('grafico_h', 'Gráfico Histórico')}", expanded=st.session_state.show_all_charts):
                 try:
                     # 1. TRADUÇÃO DO TICKER PARA O GRÁFICO
                     yf_ticker = ticker
@@ -319,12 +331,16 @@ for i, ativo in enumerate(ativos_f):
                         if isinstance(hist_data.columns, pd.MultiIndex):
                             hist_data.columns = hist_data.columns.get_level_values(0)
                         
+                        # --- FUSO HORÁRIO NO GRÁFICO ---
+                        # Converte as horas do gráfico para o fuso que você selecionou no Sidebar
+                        user_tz = pytz.timezone(st.session_state.sel_fuso)
+                        hist_data.index = hist_data.index.tz_convert(user_tz)
+                        
                         # --- CONVERSÃO DE MOEDA NO GRÁFICO ---
-                        # Usamos a mesma taxa 'taxa_c' que você calculou para o preço principal
                         taxa_c = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
                         hist_data['Close'] = hist_data['Close'] * taxa_c
                         
-                        # Criando o gráfico (agora com valor convertido)
+                        # Criando o gráfico
                         fig_in = px.line(hist_data, y="Close", template="plotly_dark", color_discrete_sequence=["#007bff"])
                         
                         fig_in.update_layout(
@@ -333,11 +349,21 @@ for i, ativo in enumerate(ativos_f):
                             showlegend=False
                         )
                         
-                        fig_in.update_xaxes(
-                            title=None,
-                            showgrid=False,
-                            tickformat="%H:%M" if periodo_grafico == "1d" else "%d/%m"
-                        )
+                        # --- NOVO: LÓGICA DE ATUALIZAÇÃO DO EIXO X (10 EM 10 MIN) ---
+                        if periodo_grafico == "1d" and not is_crypto:
+                            fig_in.update_xaxes(
+                                title=None,
+                                showgrid=False,
+                                tickformat="%H:%M",
+                                dtick=600000, # 600.000ms = 10 minutos
+                                tickangle=0
+                            )
+                        else:
+                            fig_in.update_xaxes(
+                                title=None,
+                                showgrid=False,
+                                tickformat="%H:%M" if periodo_grafico == "1d" else "%d/%m"
+                            )
                         
                         fig_in.update_yaxes(title=None, showgrid=True, gridcolor="#333")
                         
