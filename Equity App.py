@@ -3,9 +3,9 @@ import pandas as pd
 import websocket
 import json
 import threading
-import time  # Este é o módulo de tempo do sistema
+import time  
 from finnhub import Client
-from datetime import datetime, time as dt_time # Importamos o 'time' do datetime com apelido
+from datetime import datetime, timedelta, time as dt_time 
 import pytz 
 import yfinance as yf
 import plotly.express as px
@@ -311,64 +311,75 @@ for i, ativo in enumerate(ativos_f):
             st.write(f"{t['compra']} **{(invest_atual / taxa_c) / price if price > 0 else 0:.5f}**")
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
             
-            # --- EXPANDER PARA O GRÁFICO ---
-            # O 'expanded' agora obedece ao estado global do botão de abrir/fechar tudo
-            with st.expander(f"📈 {t.get('grafico_h', 'Gráfico Histórico')}", expanded=st.session_state.show_all_charts):
-                try:
-                    # 1. TRADUÇÃO DO TICKER PARA O GRÁFICO
-                    yf_ticker = ticker
-                    if "BINANCE:" in ticker:
-                        yf_ticker = ticker.replace("BINANCE:", "").replace("USDT", "-USD")
-                    
-                    # 2. DEFINIÇÃO DO PERÍODO
-                    is_crypto = "BINANCE" in ticker
-                    periodo_grafico = "1d" if (status_mercado == "ON" and not is_crypto) else "5d"
-                    intervalo_grafico = "5m" if periodo_grafico == "1d" else "60m"
-                    
-                    hist_data = yf.download(yf_ticker, period=periodo_grafico, interval=intervalo_grafico, progress=False)
-                    
-                    if not hist_data.empty:
-                        if isinstance(hist_data.columns, pd.MultiIndex):
-                            hist_data.columns = hist_data.columns.get_level_values(0)
-                        
-                        # --- FUSO HORÁRIO NO GRÁFICO ---
-                        # Converte as horas do gráfico para o fuso que você selecionou no Sidebar
-                        user_tz = pytz.timezone(st.session_state.sel_fuso)
-                        hist_data.index = hist_data.index.tz_convert(user_tz)
-                        
-                        # --- CONVERSÃO DE MOEDA NO GRÁFICO ---
-                        taxa_c = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
-                        hist_data['Close'] = hist_data['Close'] * taxa_c
-                        
-                        # Criando o gráfico
-                        fig_in = px.line(hist_data, y="Close", template="plotly_dark", color_discrete_sequence=["#007bff"])
-                        
-                        fig_in.update_layout(
-                            margin=dict(l=0, r=0, t=10, b=10), 
-                            height=180,
-                            showlegend=False
-                        )
-                        
-                        # --- NOVO: LÓGICA DE ATUALIZAÇÃO DO EIXO X (10 EM 10 MIN) ---
-                        if periodo_grafico == "1d" and not is_crypto:
-                            fig_in.update_xaxes(
-                                title=None,
-                                showgrid=False,
-                                tickformat="%H:%M",
-                                dtick=600000, # 600.000ms = 10 minutos
-                                tickangle=0
-                            )
-                        else:
-                            fig_in.update_xaxes(
-                                title=None,
-                                showgrid=False,
-                                tickformat="%H:%M" if periodo_grafico == "1d" else "%d/%m"
-                            )
-                        
-                        fig_in.update_yaxes(title=None, showgrid=True, gridcolor="#333")
-                        
-                        st.plotly_chart(fig_in, use_container_width=True, config={'displayModeBar': False, 'displaylogo': False})
-                    else:
-                        st.warning("Dados indisponíveis.")
-                except Exception as e:
-                    st.error(f"Erro técnico: {e}")
+          # --- EXPANDER PARA O GRÁFICO (SISTEMA DINÂMICO EQUITY PRO) ---
+with st.expander(f"📈 {t.get('grafico_h', 'Gráfico Histórico')}", expanded=st.session_state.show_all_charts):
+    try:
+        yf_ticker = ticker
+        if "BINANCE:" in ticker:
+            yf_ticker = ticker.replace("BINANCE:", "").replace("USDT", "-USD")
+        
+        is_crypto = "BINANCE" in ticker
+        # Pegamos a hora de NY para saber se o mercado fechou (16h lá)
+        ny_now = datetime.now(pytz.timezone('America/New_York'))
+        hoje_str = ny_now.strftime('%Y-%m-%d')
+        
+        # --- LÓGICA DE ESTADOS DO GRÁFICO ---
+        modo_grafico = "HISTORICO" # Padrão
+        periodo = "5d"
+        intervalo = "60m"
+        cor_grafico = "#007bff" # Azul para histórico
+
+        if status_mercado == "ON" or is_crypto:
+            # ESTADO 1: Mercado Aberto (Gráfico do dia, 10 em 10 min)
+            modo_grafico = "LIVE"
+            periodo = "1d"
+            intervalo = "5m"
+            cor_grafico = "#26a69a" # Verde para tempo real
+        else:
+            # ESTADO 2: Mercado Fechado (Verificar se mostramos o botão de resumo)
+            if not is_crypto and ny_now.hour >= 16:
+                # Criamos uma chave única para o botão não dar conflito entre as ações
+                if st.button(f"🔍 Analisar pregão de hoje ({hoje_str})", key=f"btn_hoje_{ticker}"):
+                    modo_grafico = "RESUMO_HOJE"
+                    periodo = "1d"
+                    intervalo = "5m"
+                    cor_grafico = "#26a69a"
+
+        # --- EXECUÇÃO DO DOWNLOAD ---
+        if modo_grafico == "HISTORICO" and not is_crypto:
+            # Filtra para mostrar apenas dias passados (ex: 14, 16, 18)
+            ontem_dt = ny_now - timedelta(days=1)
+            inicio_dt = ny_now - timedelta(days=5)
+            hist_data = yf.download(yf_ticker, start=inicio_dt.strftime('%Y-%m-%d'), 
+                                    end=ny_now.strftime('%Y-%m-%d'), interval="60m", progress=False)
+        else:
+            # Para LIVE ou RESUMO_HOJE
+            hist_data = yf.download(yf_ticker, period=periodo, interval=intervalo, progress=False)
+
+        if not hist_data.empty:
+            if isinstance(hist_data.columns, pd.MultiIndex):
+                hist_data.columns = hist_data.columns.get_level_values(0)
+            
+            # Fuso Horário e Moeda
+            user_tz = pytz.timezone(st.session_state.sel_fuso)
+            hist_data.index = hist_data.index.tz_convert(user_tz)
+            taxa_c = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
+            hist_data['Close'] = hist_data['Close'] * taxa_c
+            
+            # Criando o Plotly
+            fig_in = px.line(hist_data, y="Close", template="plotly_dark", color_discrete_sequence=[cor_grafico])
+            fig_in.update_layout(margin=dict(l=0, r=0, t=10, b=10), height=180, showlegend=False)
+            
+            # Ajuste do Eixo X (Se for 1d, mostra de 10 em 10 min)
+            if periodo == "1d":
+                fig_in.update_xaxes(title=None, showgrid=False, tickformat="%H:%M", dtick=600000, tickangle=0)
+            else:
+                fig_in.update_xaxes(title=None, showgrid=False, tickformat="%d/%m %H:%M")
+            
+            fig_in.update_yaxes(title=None, showgrid=True, gridcolor="#333")
+            st.plotly_chart(fig_in, use_container_width=True, config={'displayModeBar': False, 'displaylogo': False})
+        else:
+            st.warning("Aguardando consolidação de dados...")
+            
+    except Exception as e:
+        st.error(f"Erro no gráfico: {e}")
