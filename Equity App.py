@@ -267,34 +267,27 @@ with col_stats2:
     st.subheader(t["terminal"])
     st.write(f"{t['monitor']} **{filtro_setor}**")
 
-    # --- QUADRO AZUL (CÂMBIO) ---
-    # Este bloco deve aparecer apenas uma vez aqui
+    # 2. Quadro Azul de Câmbio (Apenas uma vez)
     taxa_ex = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
     simb_m = "BRL" if "BRL" in st.session_state.moeda_save else ("EUR" if "EUR" in st.session_state.moeda_save else "USD")
     st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {st.session_state.moeda_save}.")
 
-    # --- BOTÕES (ABAIXO DO QUADRO AZUL) ---
-    # Criamos colunas para empurrar os botões para a direita
+    # 3. Botões posicionados ABAIXO do quadro azul, à direita
     c_vazia, c_btns = st.columns([1, 1]) 
     
     with c_btns:
         cb1, cb2 = st.columns(2)
         with cb1:
-            if st.button(t["atualizar"], key="btn_ref_v3", use_container_width=True):
+            if st.button(t["atualizar"], key="btn_ref_final_ok", use_container_width=True):
                 st.rerun()
         with cb2:
             label_btn = t["btn_expandir"] if not st.session_state.show_all_charts else t["btn_recolher"]
-            if st.button(label_btn, key="btn_exp_v3", use_container_width=True, help=t["help_graficos"]):
+            if st.button(label_btn, key="btn_exp_final_ok", use_container_width=True, help=t["help_graficos"]):
                 st.session_state.show_all_charts = not st.session_state.show_all_charts
                 st.rerun()
         
-        # Horário da última atualização
+        # Horário da última atualização alinhado à direita
         st.markdown(f"<p class='refresh-text' style='margin-top:-10px; text-align: right;'>{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
-
-    # 3. Faixa azul de informações (Câmbio) agora fica abaixo de tudo no terminal
-    taxa_ex = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
-    simb_m = "BRL" if "BRL" in st.session_state.moeda_save else ("EUR" if "EUR" in st.session_state.moeda_save else "USD")
-    st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {st.session_state.moeda_save}.")
     
 st.divider()
 ativos_f = ativos_db if filtro_setor == t["todos"] else [a for a in ativos_db if a['setor'] == filtro_setor]
