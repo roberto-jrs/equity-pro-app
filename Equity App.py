@@ -265,23 +265,24 @@ with col_stats1:
 with col_stats2:
     # 1. Título do Terminal
     st.subheader(t["terminal"])
-    
-    # 2. Linha de cabeçalho: Info à esquerda e Botões à direita (exatamente como na sua seta)
-    c_info, c_btns = st.columns([1, 1]) 
-    
-    with c_info:
-        # Texto alinhado à esquerda
-        st.write(f"{t['monitor']} **{filtro_setor}**")
+    st.write(f"{t['monitor']} **{filtro_setor}**")
+
+    # 2. Quadro de Câmbio Azul (Agora ele vem PRIMEIRO, no topo)
+    taxa_ex = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
+    simb_m = "BRL" if "BRL" in st.session_state.moeda_save else ("EUR" if "EUR" in st.session_state.moeda_save else "USD")
+    st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {st.session_state.moeda_save}.")
+
+    # 3. Linha de Botões (Posicionada ABAIXO do quadro azul, na direita)
+    c_vazia, c_btns = st.columns([1, 1]) 
     
     with c_btns:
-        # Botões alinhados à direita
         cb1, cb2 = st.columns(2)
         with cb1:
-            if st.button(t["atualizar"], key="btn_refresh_final", use_container_width=True):
+            if st.button(t["atualizar"], key="btn_refresh_final_v2", use_container_width=True):
                 st.rerun()
         with cb2:
             label_btn = t["btn_expandir"] if not st.session_state.show_all_charts else t["btn_recolher"]
-            if st.button(label_btn, key="btn_toggle_final", use_container_width=True, help=t["help_graficos"]):
+            if st.button(label_btn, key="btn_toggle_final_v2", use_container_width=True, help=t["help_graficos"]):
                 st.session_state.show_all_charts = not st.session_state.show_all_charts
                 st.rerun()
         
