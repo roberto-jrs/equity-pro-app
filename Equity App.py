@@ -267,29 +267,35 @@ with col_stats2:
     st.subheader(t["terminal"])
     st.write(f"{t['monitor']} **{filtro_setor}**")
 
-    # 2. Quadro Azul de Câmbio (Apenas uma vez)
+   # 2. Quadro Azul (Câmbio)
     taxa_ex = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
     simb_m = "BRL" if "BRL" in st.session_state.moeda_save else ("EUR" if "EUR" in st.session_state.moeda_save else "USD")
-    st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {st.session_state.moeda_save}.")
 
-   # --- BOTÕES ALINHADOS À DIREITA (RENTE À LINHA) ---
-    # Usamos uma proporção de [2, 1] para a coluna da direita ser menor e ficar no canto
-    c_vazia, c_btns = st.columns([2, 1]) 
-    
-    with c_btns:
-        # Criamos duas colunas internas para os botões ficarem lado a lado
-        cb1, cb2 = st.columns(2)
-        with cb1:
-            if st.button(t["atualizar"], key="btn_refresh_rente", use_container_width=True):
-                st.rerun()
-        with cb2:
-            label_btn = t["btn_expandir"] if not st.session_state.show_all_charts else t["btn_recolher"]
-            if st.button(label_btn, key="btn_expand_rente", use_container_width=True):
-                st.session_state.show_all_charts = not st.session_state.show_all_charts
-                st.rerun()
-        
-        # Horário da última atualização alinhado à direita
-        st.markdown(f"<p style='text-align: right; font-size: 0.8rem; color: #666; margin-top: -5px;'>{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
+    with st.container():
+        st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {st.session_state.moeda_save}.")
+        st.markdown("""
+            <style>
+                div[data-testid="stVerticalBlock"] > div:has(div.stButton) {
+                    margin-top: -25px;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
+   # 3. Linha de Botões
+        c_vazia, c_btns = st.columns([1, 1]) 
+        with c_btns:
+            cb1, cb2 = st.columns(2)
+            with cb1:
+                if st.button(t["atualizar"], key="btn_refresh_colado", use_container_width=True):
+                    st.rerun()
+            with cb2:
+                label_btn = t["btn_expandir"] if not st.session_state.show_all_charts else t["btn_recolher"]
+                if st.button(label_btn, key="btn_expand_colado", use_container_width=True):
+                    st.session_state.show_all_charts = not st.session_state.show_all_charts
+                    st.rerun()
+            
+            # Horário alinhado
+            st.markdown(f"<p style='text-align: right; font-size: 0.8rem; color: #666; margin-top: -10px;'>{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
     
 st.divider()
 ativos_f = ativos_db if filtro_setor == t["todos"] else [a for a in ativos_db if a['setor'] == filtro_setor]
