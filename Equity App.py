@@ -247,26 +247,12 @@ def render_logo_jr():
 
 render_logo_jr()
 
-c_top1, c_top2 = st.columns([3, 1])
-with c_top2:
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        if st.button(t["atualizar"], use_container_width=True):
-            st.rerun()
-    with col_btn2:
-        label_btn = t["btn_expandir"] if not st.session_state.show_all_charts else t["btn_recolher"]
-        
-        if st.button(label_btn, use_container_width=True, help=t["help_graficos"]):
-            st.session_state.show_all_charts = not st.session_state.show_all_charts
-            st.rerun()
-            
-    st.markdown(f"<p class='refresh-text'>{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
-
 status_label, status_color, status_text = check_market_status()
 st.markdown(f"<div style='background-color: {status_color}; padding: 8px; border-radius: 4px; text-align: center; color: white; font-weight: bold; margin-bottom: 20px; font-size: 0.8rem;'>STATUS: {status_label} | {status_text}</div>", unsafe_allow_html=True)
 
 # --- TERMINAL E CARDS ---
 col_stats1, col_stats2 = st.columns([1, 2])
+
 with col_stats1:
     st.subheader(t["alocacao"])
     df_pizza = pd.DataFrame(ativos_db)
@@ -280,32 +266,33 @@ with col_stats2:
     # 1. Título do Terminal
     st.subheader(t["terminal"])
     
-    # 2. Linha de cabeçalho: Info à esquerda e Botões à direita
-    c_info, c_btns = st.columns([1, 1]) # Divide o espaço do terminal em dois
+    # 2. Linha de cabeçalho: Info à esquerda e Botões à direita (exatamente como na sua seta)
+    c_info, c_btns = st.columns([1, 1]) 
     
     with c_info:
+        # Texto alinhado à esquerda
         st.write(f"{t['monitor']} **{filtro_setor}**")
     
     with c_btns:
-        # Cria duas colunas pequenas dentro da metade direita para os botões ficarem lado a lado
+        # Botões alinhados à direita
         cb1, cb2 = st.columns(2)
         with cb1:
-            if st.button(t["atualizar"], key="btn_refresh_top", use_container_width=True):
+            if st.button(t["atualizar"], key="btn_refresh_final", use_container_width=True):
                 st.rerun()
         with cb2:
             label_btn = t["btn_expandir"] if not st.session_state.show_all_charts else t["btn_recolher"]
-            if st.button(label_btn, key="btn_toggle_charts", use_container_width=True, help=t["help_graficos"]):
+            if st.button(label_btn, key="btn_toggle_final", use_container_width=True, help=t["help_graficos"]):
                 st.session_state.show_all_charts = not st.session_state.show_all_charts
                 st.rerun()
         
-        # Horário da última atualização alinhado à direita, abaixo dos botões
-        st.markdown(f"<p class='refresh-text' style='margin-top:-10px;'>{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
+        # Horário da última atualização alinhado à direita
+        st.markdown(f"<p class='refresh-text' style='margin-top:-10px; text-align: right;'>{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
 
-    # 3. Faixa azul de informações (Câmbio)
+    # 3. Faixa azul de informações (Câmbio) agora fica abaixo de tudo no terminal
     taxa_ex = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
     simb_m = "BRL" if "BRL" in st.session_state.moeda_save else ("EUR" if "EUR" in st.session_state.moeda_save else "USD")
     st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {st.session_state.moeda_save}.")
-
+    
 st.divider()
 ativos_f = ativos_db if filtro_setor == t["todos"] else [a for a in ativos_db if a['setor'] == filtro_setor]
 cols = st.columns(3)
