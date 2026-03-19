@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import websocket
@@ -247,56 +246,41 @@ def render_logo_jr():
 
 render_logo_jr()
 
+c_top1, c_top2 = st.columns([3, 1])
+with c_top2:
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button(t["atualizar"], use_container_width=True):
+            st.rerun()
+    with col_btn2:
+        label_btn = t["btn_expandir"] if not st.session_state.show_all_charts else t["btn_recolher"]
+        
+        if st.button(label_btn, use_container_width=True, help=t["help_graficos"]):
+            st.session_state.show_all_charts = not st.session_state.show_all_charts
+            st.rerun()
+            
+    st.markdown(f"<p class='refresh-text'>{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
+
 status_label, status_color, status_text = check_market_status()
 st.markdown(f"<div style='background-color: {status_color}; padding: 8px; border-radius: 4px; text-align: center; color: white; font-weight: bold; margin-bottom: 20px; font-size: 0.8rem;'>STATUS: {status_label} | {status_text}</div>", unsafe_allow_html=True)
 
 # --- TERMINAL E CARDS ---
 col_stats1, col_stats2 = st.columns([1, 2])
-
 with col_stats1:
     st.subheader(t["alocacao"])
     df_pizza = pd.DataFrame(ativos_db)
-    if filtro_setor != t["todos"]: 
-        df_pizza = df_pizza[df_pizza['setor'] == filtro_setor]
+    if filtro_setor != t["todos"]: df_pizza = df_pizza[df_pizza['setor'] == filtro_setor]
     fig = px.pie(df_pizza, names='setor', hole=0.4, template="plotly_dark", color_discrete_sequence=px.colors.qualitative.Set2)
     fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=230, showlegend=False)
     st.plotly_chart(fig, use_container_width=True, config={'displaylogo': False})
 
 with col_stats2:
-    # 1. Título do Terminal
     st.subheader(t["terminal"])
     st.write(f"{t['monitor']} **{filtro_setor}**")
-
-   # 2. Quadro Azul (Câmbio)
     taxa_ex = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
     simb_m = "BRL" if "BRL" in st.session_state.moeda_save else ("EUR" if "EUR" in st.session_state.moeda_save else "USD")
+    st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {st.session_state.moeda_save}.")
 
-    with st.container():
-        st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {st.session_state.moeda_save}.")
-        st.markdown("""
-            <style>
-                div[data-testid="stVerticalBlock"] > div:has(div.stButton) {
-                    margin-top: -25px;
-                }
-            </style>
-        """, unsafe_allow_html=True)
-
-   # 3. Linha de Botões
-        c_vazia, c_btns = st.columns([1, 1]) 
-        with c_btns:
-            cb1, cb2 = st.columns(2)
-            with cb1:
-                if st.button(t["atualizar"], key="btn_refresh_colado", use_container_width=True):
-                    st.rerun()
-            with cb2:
-                label_btn = t["btn_expandir"] if not st.session_state.show_all_charts else t["btn_recolher"]
-                if st.button(label_btn, key="btn_expand_colado", use_container_width=True):
-                    st.session_state.show_all_charts = not st.session_state.show_all_charts
-                    st.rerun()
-            
-            # Horário alinhado
-            st.markdown(f"<p style='text-align: right; font-size: 0.8rem; color: #666; margin-top: -10px;'>{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
-    
 st.divider()
 ativos_f = ativos_db if filtro_setor == t["todos"] else [a for a in ativos_db if a['setor'] == filtro_setor]
 cols = st.columns(3)
