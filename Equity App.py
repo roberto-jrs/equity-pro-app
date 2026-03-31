@@ -351,33 +351,51 @@ def converter(val):
 for i, ativo in enumerate(ativos_f):
     with cols[i % 3]:
         ticker = ativo['ticker']
-        data = st.session_state.live_data.get(ticker)
-        q = get_safe_quote(ticker)
-        fech_ant = q.get('pc', 0)
         
-        label_status = ""
-        if status_label == "OFF": 
-            label_status = t.get("historico", "HISTÓRICO")
-        elif data: 
+        # 1. BUSCA OS DADOS (Usando a nova função que usa yfinance)
+        q = get_safe_quote(ticker) 
+        
+        # 2. PEGA O PREÇO E A VARIAÇÃO
+        # Se houver dados 'LIVE' na sessão, usa eles, senão usa o que veio da função q
+        data_live = st.session_state.live_data.get(ticker)
+        
+        if data_live:
+            price = data_live['price']
+            var = data_live.get('change', q['change'])
             label_status = "LIVE"
+            time_ref = data_live['time']
+        else:
+            price = q['price']
+            var = q['change']
+            label_status = t.get("historico", "HISTÓRICO")
+            time_ref = "YF-Delay"
 
-        price = data['price'] if data else q.get('c', 0)
-        time_ref = data['time'] if data else "--:--"
-        var = ((price - fech_ant) / fech_ant * 100) if fech_ant > 0 else 0
+        # 3. CONVERSÃO DE MOEDA
         p_conv, simb = converter(price)
         
+        # 4. RENDERIZAÇÃO DO CARD (Visual que você gosta)
         with st.container(border=True):
             ch, cs = st.columns([2, 1])
             ch.markdown(f"**{ativo['nome']}**")
-            if label_status:
-                cs.markdown(f"<span style='background:{'#26a69a' if label_status=='LIVE' else '#546e7a'}; color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;'>{label_status}</span>", unsafe_allow_html=True)
             
+            # Badge de Status
+            cor_badge = '#26a69a' if label_status == 'LIVE' else '#546e7a'
+            cs.markdown(f"<span style='background:{cor_badge}; color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;'>{label_status}</span>", unsafe_allow_html=True)
+            
+            # Preço Grande
             st.markdown(f"### {simb} {p_conv:,.2f}")
-            st.markdown(f"<p style='color:{'#26a69a' if var >= 0 else '#ef5350'}; font-weight:bold; margin-top:-15px;'>{'▲' if var >= 0 else '▼'} {var:.2f}%</p>", unsafe_allow_html=True)
             
+            # Seta de Variação
+            cor_var = '#26a69a' if var >= 0 else '#ef5350'
+            seta = '▲' if var >= 0 else '▼'
+            st.markdown(f"<p style='color:{cor_var}; font-weight:bold; margin-top:-15px;'>{seta} {var:.2f}%</p>", unsafe_allow_html=True)
+            
+            # Cálculo de Compra
             taxa_c = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1)
             invest_atual = st.session_state.invest_save
-            st.write(f"{t['compra']} **{(invest_atual / taxa_c) / price if price > 0 else 0:.5f}**")
+            qtd_compra = (invest_atual / taxa_c) / price if price > 0 else 0
+            st.write(f"{t['compra']} **{qtd_compra:.5f}**")
+            
             st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
             
             # --- EXPANDER PARA O GRÁFICO ---
