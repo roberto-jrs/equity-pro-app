@@ -163,37 +163,38 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def get_safe_quote(ticker):
-    # Dicionário padrão de segurança (caso tudo falhe)
-    fallback = {"price": 0.0, "change": 0.0, "status": "error"}
-    
     try:
+        # Criamos o objeto do ativo
         data = yf.Ticker(ticker)
         
-        # Tentativa 1: fast_info
-        price = data.fast_info.get('last_price')
-        open_price = data.fast_info.get('open')
+        # BUSCA O HISTÓRICO MAIS RECENTE (1 dia, intervalo de 1 minuto)
+        # Isso é muito mais confiável que o fast_info
+        df = data.history(period="1d", interval="1m")
         
-        # Tentativa 2: Se falhar, tenta o histórico rápido
-        if price is None or price == 0:
-            hist = data.history(period="1d")
-            if not hist.empty:
-                price = hist['Close'].iloc[-1]
-                open_price = hist['Open'].iloc[-1]
+        if not df.empty:
+            # Pega o último fechamento e o primeiro preço do dia
+            preco_atual = df['Close'].iloc[-1]
+            preco_abertura = df['Open'].iloc[0]
+            variacao = ((preco_atual - preco_abertura) / preco_abertura) * 100
+        else:
+            # Se o mercado estiver fechado, tenta o fechamento de ontem
+            df_diario = data.history(period="2d")
+            if not df_diario.empty:
+                preco_atual = df_diario['Close'].iloc[-1]
+                # Var. em relação ao fechamento anterior
+                ref = df_diario['Close'].iloc[-2] if len(df_diario) > 1 else preco_atual
+                variacao = ((preco_atual - ref) / ref) * 100
+            else:
+                return {"price": 0.0, "change": 0.0, "status": "error"}
 
-        # Validação final dos valores
-        final_price = float(price) if price is not None else 0.0
-        final_open = float(open_price) if open_price is not None else 0.0
-        
-        variacao = ((final_price - final_open) / final_open) * 100 if final_open > 0 else 0
-        
         return {
-            "price": final_price, 
-            "change": variacao,
+            "price": float(preco_atual),
+            "change": float(variacao),
             "status": "success"
         }
     except Exception as e:
-        # Se der qualquer erro, retorna o fallback com as chaves que o loop precisa
-        return fallback
+        # Log de erro silencioso para não travar seu monitor 4k
+        return {"price": 0.0, "change": 0.0, "status": "error"}
 
 # --- SIDEBAR ---
 with st.sidebar:
