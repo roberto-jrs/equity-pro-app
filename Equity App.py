@@ -199,6 +199,10 @@ with st.sidebar:
     st.selectbox(t["fuso"], fusos_lista, key='sel_fuso')
     st.selectbox(t["moeda"], ["USD ($)", "BRL (R$)", "EUR (€)"], key="moeda_save")
     st.number_input(t["capital"], min_value=0.0, step=500.0, key="invest_save")
+
+    st.divider()
+    setores_lista = sorted(list(set([a['setor'] for a in st.session_state.meus_ativos])))
+    filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
     
     # LÓGICA DE FILTRO DINÂMICA
     
@@ -219,10 +223,6 @@ with st.sidebar:
         {"ticker": "BINANCE:BTCUSDT", "nome": "Bitcoin", "setor": "Cripto"},
         {"ticker": "BINANCE:ETHUSDT", "nome": "Ethereum", "setor": "Cripto"}
     ]
-
-setores_lista = sorted(list(set([a['setor'] for a in st.session_state.meus_ativos])))
-filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
-st.session_state.setor_save = filtro_setor
 
 # --- FUNÇÕES DE DADOS ---
 def get_now_local():
