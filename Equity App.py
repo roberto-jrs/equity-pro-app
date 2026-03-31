@@ -360,13 +360,13 @@ for i, ativo in enumerate(ativos_f):
                             showlegend=False
                         )
                         
-                        # --- NOVO: LÓGICA DE ATUALIZAÇÃO DO EIXO X (10 EM 10 MIN) ---
+                        # --- LÓGICA DE ATUALIZAÇÃO DO EIXO X (1 EM 1 HORA) ---
                         if periodo_grafico == "1d" and not is_crypto:
                             fig_in.update_xaxes(
                                 title=None,
                                 showgrid=False,
                                 tickformat="%H:%M",
-                                dtick=600000, # 600.000ms = 10 minutos
+                                dtick=3600000, # Alterado para 3.600.000ms = 1 hora
                                 tickangle=0
                             )
                         else:
