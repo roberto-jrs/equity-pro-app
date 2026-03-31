@@ -201,9 +201,6 @@ with st.sidebar:
     st.number_input(t["capital"], min_value=0.0, step=500.0, key="invest_save")
     
     # LÓGICA DE FILTRO DINÂMICA
-    setores_lista = sorted(list(set([a['setor'] for a in st.session_state.meus_ativos])))
-    filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
-    st.session_state.setor_save = filtro_setor
     
     if 'meus_ativos' not in st.session_state:
         st.session_state.meus_ativos = [
