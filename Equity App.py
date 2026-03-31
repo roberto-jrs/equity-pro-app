@@ -163,38 +163,37 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def get_safe_quote(ticker):
+    # Dicionário padrão de segurança (caso tudo falhe)
+    fallback = {"price": 0.0, "change": 0.0, "status": "error"}
+    
     try:
         data = yf.Ticker(ticker)
         
-        # Tentativa 1: fast_info (mais rápido)
+        # Tentativa 1: fast_info
         price = data.fast_info.get('last_price')
         open_price = data.fast_info.get('open')
         
-        # Tentativa 2: Se o fast_info falhar, tenta o basic_info
-        if price is None or price == 0:
-            price = data.basic_info.get('last_price')
-            open_price = data.basic_info.get('open')
-            
-        # Tentativa 3: Se tudo falhar, pega o último histórico de 1 dia
+        # Tentativa 2: Se falhar, tenta o histórico rápido
         if price is None or price == 0:
             hist = data.history(period="1d")
             if not hist.empty:
                 price = hist['Close'].iloc[-1]
                 open_price = hist['Open'].iloc[-1]
 
-        # Se mesmo assim for None, define como 0 para evitar erro
-        price = price if price is not None else 0.0
-        open_price = open_price if open_price is not None else 0.0
+        # Validação final dos valores
+        final_price = float(price) if price is not None else 0.0
+        final_open = float(open_price) if open_price is not None else 0.0
         
-        variacao = ((price - open_price) / open_price) * 100 if open_price > 0 else 0
+        variacao = ((final_price - final_open) / final_open) * 100 if final_open > 0 else 0
         
         return {
-            "price": price, 
+            "price": final_price, 
             "change": variacao,
             "status": "success"
         }
     except Exception as e:
-        return {"price": 0.0, "change": 0.0, "status": "error"}
+        # Se der qualquer erro, retorna o fallback com as chaves que o loop precisa
+        return fallback
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -364,25 +363,30 @@ for i, ativo in enumerate(ativos_f):
     with cols[i % 3]:
         ticker = ativo['ticker']
         
-        # 1. BUSCA OS DADOS (Usando a nova função que usa yfinance)
+        # 1. BUSCA OS DADOS (Com proteção extra)
         q = get_safe_quote(ticker) 
+
+        # --- PROTEÇÃO CONTRA O KEYERROR ---
+        # Se 'q' for None ou não tiver as chaves, definimos valores padrão aqui mesmo
+        if not q or not isinstance(q, dict) or 'price' not in q:
+            q = {"price": 0.0, "change": 0.0}
+        # ----------------------------------
         
         # 2. PEGA O PREÇO E A VARIAÇÃO
-        # Se houver dados 'LIVE' na sessão, usa eles, senão usa o que veio da função q
         data_live = st.session_state.live_data.get(ticker)
         
         if data_live:
-            price = data_live['price']
+            price = data_live.get('price', q['price'])
             var = data_live.get('change', q['change'])
             label_status = "LIVE"
-            time_ref = data_live['time']
+            time_ref = data_live.get('time', "--:--")
         else:
             price = q['price']
             var = q['change']
             label_status = t.get("historico", "HISTÓRICO")
             time_ref = "YF-Delay"
 
-        # 3. CONVERSÃO DE MOEDA
+        # 3. CONVERSÃO DE MOEDA (Evita divisão por zero se o preço for 0.0)
         p_conv, simb = converter(price)
         
         # 4. RENDERIZAÇÃO DO CARD (Visual que você gosta)
