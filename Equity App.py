@@ -206,12 +206,20 @@ with st.sidebar:
             opcoes = {item['symbol']: item['description'] for item in res['result'][:10]}
             escolha = st.selectbox("Resultado:", list(opcoes.keys()), format_func=lambda x: f"{x} - {opcoes[x]}")
             
+            # APENAS UM BOTÃO COM A LÓGICA DO .SA
             if st.button("➕ Adicionar ao Terminal"):
-                novo = {"ticker": escolha, "nome": opcoes[escolha], "setor": "Personalizado"}
+                ticker_escolhido = escolha
+                
+                # MÁGICA: Se for brasileiro (ex: PETR4, VALE3), adicionamos o .SA para o motor de preços
+                if len(ticker_escolhido) <= 6 and not ticker_escolhido.endswith(".SA") and ":" not in ticker_escolhido:
+                    ticker_escolhido = f"{ticker_escolhido}.SA"
+                
+                novo = {"ticker": ticker_escolhido, "nome": opcoes[escolha], "setor": "Personalizado"}
+                
                 # Adiciona à lista da sessão
                 st.session_state.meus_ativos.append(novo)
-                st.success(f"{escolha} adicionado!")
-                time.sleep(1) # Pequena pausa para o usuário ler
+                st.success(f"{ticker_escolhido} adicionado com sucesso!")
+                time.sleep(0.5)
                 st.rerun()
     st.divider()
     
