@@ -354,56 +354,53 @@ for i, ativo in enumerate(ativos_f):
     with cols[i % 3]:
         ticker = ativo['ticker']
         
-        # 1. BUSCA OS DADOS (Com proteção extra)
-        q = get_safe_quote(ticker) 
-
-        # --- PROTEÇÃO CONTRA O KEYERROR ---
-        # Se 'q' for None ou não tiver as chaves, definimos valores padrão aqui mesmo
-        if not q or not isinstance(q, dict) or 'price' not in q:
-            q = {"price": 0.0, "change": 0.0}
-        # ----------------------------------
+        # 1. PEGA OS DADOS DA FUNÇÃO
+        q = get_safe_quote(ticker)
         
-        # 2. PEGA O PREÇO E A VARIAÇÃO
+        # 2. SISTEMA DE SEGURANÇA (Se q não for um dicionário válido)
+        if not isinstance(q, dict):
+            q = {"price": 0.0, "change": 0.0}
+
+        # 3. TENTA PEGA O PREÇO DE 3 FONTES DIFERENTES (Para não zerar)
+        # Fonte A: Live Data (Criptos/Websocket)
+        # Fonte B: Chave 'price' (Yahoo Finance/Nova função)
+        # Fonte C: Chave 'c' (Finnhub/Função antiga)
+        
         data_live = st.session_state.live_data.get(ticker)
         
         if data_live:
-            price = data_live.get('price', q['price'])
-            var = data_live.get('change', q['change'])
+            price = data_live.get('price', 0)
+            var = data_live.get('change', 0)
             label_status = "LIVE"
-            time_ref = data_live.get('time', "--:--")
         else:
-            price = q['price']
-            var = q['change']
+            # Tenta 'price' (YF), se não achar tenta 'c' (Finnhub)
+            price = q.get('price', q.get('c', 0))
+            var = q.get('change', q.get('dp', 0))
             label_status = t.get("historico", "HISTÓRICO")
-            time_ref = "YF-Delay"
 
-        # 3. CONVERSÃO DE MOEDA (Evita divisão por zero se o preço for 0.0)
+        # 4. CONVERSÃO E EXIBIÇÃO
         p_conv, simb = converter(price)
         
-        # 4. RENDERIZAÇÃO DO CARD (Visual que você gosta)
         with st.container(border=True):
             ch, cs = st.columns([2, 1])
             ch.markdown(f"**{ativo['nome']}**")
             
-            # Badge de Status
             cor_badge = '#26a69a' if label_status == 'LIVE' else '#546e7a'
             cs.markdown(f"<span style='background:{cor_badge}; color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;'>{label_status}</span>", unsafe_allow_html=True)
             
-            # Preço Grande
             st.markdown(f"### {simb} {p_conv:,.2f}")
             
-            # Seta de Variação
             cor_var = '#26a69a' if var >= 0 else '#ef5350'
             seta = '▲' if var >= 0 else '▼'
             st.markdown(f"<p style='color:{cor_var}; font-weight:bold; margin-top:-15px;'>{seta} {var:.2f}%</p>", unsafe_allow_html=True)
             
-            # Cálculo de Compra
+            # Cálculo de Compra (Proteção contra divisão por zero)
             taxa_c = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1)
             invest_atual = st.session_state.invest_save
             qtd_compra = (invest_atual / taxa_c) / price if price > 0 else 0
             st.write(f"{t['compra']} **{qtd_compra:.5f}**")
             
-            st.caption(f"Code: `{ticker}` | Ref: {time_ref}")
+            st.caption(f"Code: `{ticker}`")
             
             # --- EXPANDER PARA O GRÁFICO ---
             # O 'expanded' agora obedece ao estado global do botão de abrir/fechar tudo
