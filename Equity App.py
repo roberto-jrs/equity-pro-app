@@ -221,7 +221,7 @@ st.session_state.meus_ativos = [
         {"ticker": "NFLX", "nome": "Netflix, Inc.", "setor": "Entretenimento"},
         {"ticker": "BINANCE:BTCUSDT", "nome": "Bitcoin", "setor": "Cripto"},
         {"ticker": "BINANCE:ETHUSDT", "nome": "Ethereum", "setor": "Cripto"}
-    ]
+]
 
 setores_lista = sorted(list(set([a['setor'] for a in st.session_state.meus_ativos])))
 filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
