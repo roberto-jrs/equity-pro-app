@@ -223,6 +223,7 @@ with st.sidebar:
         {"ticker": "BINANCE:ETHUSDT", "nome": "Ethereum", "setor": "Cripto"}
     ]
 
+# O filtro abaixo fica FORA do if
 setores_lista = sorted(list(set([a['setor'] for a in st.session_state.meus_ativos])))
 filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
 st.session_state.setor_save = filtro_setor
