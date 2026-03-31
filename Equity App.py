@@ -205,7 +205,7 @@ with st.sidebar:
     filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
     st.session_state.setor_save = filtro_setor
     
-    if 'meus_ativos' not in st.session_state:
+if 'meus_ativos' not in st.session_state:
 st.session_state.meus_ativos = [
         {"ticker": "AAPL", "nome": "Apple Inc.", "setor": "Tecnologia"},
         {"ticker": "NVDA", "nome": "NVIDIA Corp.", "setor": "Tecnologia"},
