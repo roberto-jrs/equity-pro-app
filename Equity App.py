@@ -164,24 +164,36 @@ st.markdown("""
 
 def get_safe_quote(ticker):
     try:
-        # O yfinance busca PETR4.SA, AAPL, BTC-USD, etc.
         data = yf.Ticker(ticker)
-        # Usamos fast_info para ser rápido no seu monitor 4k
-        info = data.fast_info
         
-        preco = info['last_price']
-        abertura = info['open']
+        # Tentativa 1: fast_info (mais rápido)
+        price = data.fast_info.get('last_price')
+        open_price = data.fast_info.get('open')
         
-        # Se não houver preço de abertura, evitamos erro de divisão por zero
-        variacao = ((preco - abertura) / abertura) * 100 if abertura else 0
+        # Tentativa 2: Se o fast_info falhar, tenta o basic_info
+        if price is None or price == 0:
+            price = data.basic_info.get('last_price')
+            open_price = data.basic_info.get('open')
+            
+        # Tentativa 3: Se tudo falhar, pega o último histórico de 1 dia
+        if price is None or price == 0:
+            hist = data.history(period="1d")
+            if not hist.empty:
+                price = hist['Close'].iloc[-1]
+                open_price = hist['Open'].iloc[-1]
+
+        # Se mesmo assim for None, define como 0 para evitar erro
+        price = price if price is not None else 0.0
+        open_price = open_price if open_price is not None else 0.0
+        
+        variacao = ((price - open_price) / open_price) * 100 if open_price > 0 else 0
         
         return {
-            "price": preco, 
+            "price": price, 
             "change": variacao,
             "status": "success"
         }
     except Exception as e:
-        # Se der erro (ex: ticker errado), retorna 0.0 para não quebrar o app
         return {"price": 0.0, "change": 0.0, "status": "error"}
 
 # --- SIDEBAR ---
