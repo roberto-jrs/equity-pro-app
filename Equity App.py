@@ -354,17 +354,25 @@ for i, ativo in enumerate(ativos_f):
     with cols[i % 3]:
         ticker = ativo['ticker']
         
-        # 1. PEGA OS DADOS DA FUNÇÃO
-        q = get_safe_quote(ticker)
+        # 1. TENTA PEGAR DADOS LIVE (Se existirem)
+        data_live = st.session_state.live_data.get(ticker)
         
-        # 2. SISTEMA DE SEGURANÇA (Se q não for um dicionário válido)
-        if not isinstance(q, dict):
-            q = {"price": 0.0, "change": 0.0}
+        # 2. SE NÃO TIVER LIVE (Caso da Petrobras nova), BUSCA NO YAHOO
+        if not data_live:
+            q = get_safe_quote(ticker)
+            price = q.get('price', 0)
+            var = q.get('change', 0)
+            label_status = t.get("historico", "HISTÓRICO")
+            time_ref = "YF-Data"
+        else:
+            # Se existirem dados Live, usa eles
+            price = data_live.get('price', 0)
+            var = data_live.get('change', 0)
+            label_status = "LIVE"
+            time_ref = data_live.get('time', "--:--")
 
-        # 3. TENTA PEGA O PREÇO DE 3 FONTES DIFERENTES (Para não zerar)
-        # Fonte A: Live Data (Criptos/Websocket)
-        # Fonte B: Chave 'price' (Yahoo Finance/Nova função)
-        # Fonte C: Chave 'c' (Finnhub/Função antiga)
+        # 3. CONVERSÃO E EXIBIÇÃO (O resto do seu código de card continua igual)
+        p_conv, simb = converter(price)
         
         data_live = st.session_state.live_data.get(ticker)
         
