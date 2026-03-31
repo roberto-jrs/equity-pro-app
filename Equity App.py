@@ -175,13 +175,38 @@ with st.sidebar:
     t = idiomas[st.session_state.sel_idioma]
     st.divider()
     
+    # --- NOVO: CAMPO DE BUSCA ---
+    st.header("BUSCAR ATIVOS")
+    busca = st.text_input("Ticker ou Nome (Ex: PETR4, AMZN):")
+    if busca:
+        res = finnhub_client.symbol_lookup(busca)
+        if res['count'] > 0:
+            # Pega os 10 primeiros resultados para não poluir
+            opcoes = {item['symbol']: item['description'] for item in res['result'][:10]}
+            escolha = st.selectbox("Resultado:", list(opcoes.keys()), format_func=lambda x: f"{x} - {opcoes[x]}")
+            
+            if st.button("➕ Adicionar ao Terminal"):
+                novo = {"ticker": escolha, "nome": opcoes[escolha], "setor": "Personalizado"}
+                # Adiciona à lista da sessão
+                st.session_state.meus_ativos.append(novo)
+                st.success(f"{escolha} adicionado!")
+                time.sleep(1) # Pequena pausa para o usuário ler
+                st.rerun()
+    st.divider()
+    
     st.header(t["config"])
     fusos_lista = ['America/New_York', 'America/Sao_Paulo', 'Europe/London', 'Europe/Paris', 'Asia/Tokyo', 'UTC']
     st.selectbox(t["fuso"], fusos_lista, key='sel_fuso')
     st.selectbox(t["moeda"], ["USD ($)", "BRL (R$)", "EUR (€)"], key="moeda_save")
     st.number_input(t["capital"], min_value=0.0, step=500.0, key="invest_save")
     
-    ativos_db = [
+    # LÓGICA DE FILTRO DINÂMICA
+    setores_lista = sorted(list(set([a['setor'] for a in st.session_state.meus_ativos])))
+    filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
+    st.session_state.setor_save = filtro_setor
+    
+    if 'meus_ativos' not in st.session_state:
+    st.session_state.meus_ativos = [
         {"ticker": "AAPL", "nome": "Apple Inc.", "setor": "Tecnologia"},
         {"ticker": "NVDA", "nome": "NVIDIA Corp.", "setor": "Tecnologia"},
         {"ticker": "MSFT", "nome": "Microsoft Corp.", "setor": "Tecnologia"},
@@ -197,9 +222,9 @@ with st.sidebar:
         {"ticker": "BINANCE:BTCUSDT", "nome": "Bitcoin", "setor": "Cripto"},
         {"ticker": "BINANCE:ETHUSDT", "nome": "Ethereum", "setor": "Cripto"}
     ]
-    setores_lista = sorted(list(set([a['setor'] for a in ativos_db])))
-    filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
-    st.session_state.setor_save = filtro_setor
+setores_lista = sorted(list(set([a['setor'] for a in st.session_state.meus_ativos])))
+filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
+st.session_state.setor_save = filtro_setor
 
 # --- FUNÇÕES DE DADOS ---
 def get_now_local():
@@ -268,8 +293,12 @@ st.markdown(f"<div style='background-color: {status_color}; padding: 8px; border
 col_stats1, col_stats2 = st.columns([1, 2])
 with col_stats1:
     st.subheader(t["alocacao"])
-    df_pizza = pd.DataFrame(ativos_db)
-    if filtro_setor != t["todos"]: df_pizza = df_pizza[df_pizza['setor'] == filtro_setor]
+    # ALTERADO AQUI: O gráfico de pizza agora reflete os ativos da sua sessão
+    df_pizza = pd.DataFrame(st.session_state.meus_ativos) 
+    
+    if filtro_setor != t["todos"]: 
+        df_pizza = df_pizza[df_pizza['setor'] == filtro_setor]
+        
     fig = px.pie(df_pizza, names='setor', hole=0.4, template="plotly_dark", color_discrete_sequence=px.colors.qualitative.Set2)
     fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=230, showlegend=False)
     st.plotly_chart(fig, use_container_width=True, config={'displaylogo': False})
@@ -282,9 +311,9 @@ with col_stats2:
     st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {st.session_state.moeda_save}.")
 
 st.divider()
-ativos_f = ativos_db if filtro_setor == t["todos"] else [a for a in ativos_db if a['setor'] == filtro_setor]
-cols = st.columns(3)
+ativos_f = st.session_state.meus_ativos if filtro_setor == t["todos"] else [a for a in st.session_state.meus_ativos if a['setor'] == filtro_setor]
 
+cols = st.columns(3)
 def converter(val):
     if "BRL" in st.session_state.moeda_save: return val * brl_rate, "R$"
     if "EUR" in st.session_state.moeda_save: return val * eur_rate, "€"
