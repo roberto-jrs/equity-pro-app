@@ -164,36 +164,26 @@ st.markdown("""
 
 def get_safe_quote(ticker):
     try:
-        # Criamos o objeto do ativo
-        data = yf.Ticker(ticker)
+        # Usando o client que você já tem configurado
+        res = finnhub_client.quote(ticker)
         
-        # BUSCA O HISTÓRICO MAIS RECENTE (1 dia, intervalo de 1 minuto)
-        # Isso é muito mais confiável que o fast_info
-        df = data.history(period="1d", interval="1m")
+        # 'c' é o preço atual, 'dp' é a variação percentual na Finnhub
+        price = res.get('c', 0)
+        change = res.get('dp', 0)
         
-        if not df.empty:
-            # Pega o último fechamento e o primeiro preço do dia
-            preco_atual = df['Close'].iloc[-1]
-            preco_abertura = df['Open'].iloc[0]
-            variacao = ((preco_atual - preco_abertura) / preco_abertura) * 100
-        else:
-            # Se o mercado estiver fechado, tenta o fechamento de ontem
-            df_diario = data.history(period="2d")
-            if not df_diario.empty:
-                preco_atual = df_diario['Close'].iloc[-1]
-                # Var. em relação ao fechamento anterior
-                ref = df_diario['Close'].iloc[-2] if len(df_diario) > 1 else preco_atual
-                variacao = ((preco_atual - ref) / ref) * 100
-            else:
-                return {"price": 0.0, "change": 0.0, "status": "error"}
-
+        if price == 0:
+            # Se a Finnhub falhou (comum para Brasil .SA), tentamos um último esforço com yfinance
+            import yfinance as yf
+            data = yf.Ticker(ticker).fast_info
+            price = data.get('last_price', 0)
+            change = 0 # simplificado para evitar erros
+            
         return {
-            "price": float(preco_atual),
-            "change": float(variacao),
+            "price": float(price) if price else 0.0,
+            "change": float(change) if change else 0.0,
             "status": "success"
         }
-    except Exception as e:
-        # Log de erro silencioso para não travar seu monitor 4k
+    except:
         return {"price": 0.0, "change": 0.0, "status": "error"}
 
 # --- SIDEBAR ---
