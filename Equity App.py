@@ -173,6 +173,27 @@ with st.sidebar:
         on_change=mudar_idioma
     )
     t = idiomas[st.session_state.sel_idioma]
+
+    # LÓGICA DE FILTRO DINÂMICA
+    
+    if 'meus_ativos' not in st.session_state:
+        st.session_state.meus_ativos = [
+        {"ticker": "AAPL", "nome": "Apple Inc.", "setor": "Tecnologia"},
+        {"ticker": "NVDA", "nome": "NVIDIA Corp.", "setor": "Tecnologia"},
+        {"ticker": "MSFT", "nome": "Microsoft Corp.", "setor": "Tecnologia"},
+        {"ticker": "GOOGL", "nome": "Alphabet Inc.", "setor": "Tecnologia"},
+        {"ticker": "TSLA", "nome": "Tesla, Inc.", "setor": "Automotivo"},
+        {"ticker": "AMZN", "nome": "Amazon.com", "setor": "Varejo Digital"},
+        {"ticker": "META", "nome": "Meta Platforms", "setor": "Tecnologia"},
+        {"ticker": "V", "nome": "Visa Inc.", "setor": "Financeiro"},
+        {"ticker": "JPM", "nome": "JPMorgan Chase", "setor": "Financeiro"},
+        {"ticker": "KO", "nome": "Coca-Cola Co.", "setor": "Consumo"},
+        {"ticker": "DIS", "nome": "Walt Disney Co.", "setor": "Entretenimento"},
+        {"ticker": "NFLX", "nome": "Netflix, Inc.", "setor": "Entretenimento"},
+        {"ticker": "BINANCE:BTCUSDT", "nome": "Bitcoin", "setor": "Cripto"},
+        {"ticker": "BINANCE:ETHUSDT", "nome": "Ethereum", "setor": "Cripto"}
+    ]
+    
     st.divider()
     
     # --- NOVO: CAMPO DE BUSCA ---
@@ -203,26 +224,6 @@ with st.sidebar:
     st.divider()
     setores_lista = sorted(list(set([a['setor'] for a in st.session_state.meus_ativos])))
     filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
-    
-    # LÓGICA DE FILTRO DINÂMICA
-    
-    if 'meus_ativos' not in st.session_state:
-        st.session_state.meus_ativos = [
-        {"ticker": "AAPL", "nome": "Apple Inc.", "setor": "Tecnologia"},
-        {"ticker": "NVDA", "nome": "NVIDIA Corp.", "setor": "Tecnologia"},
-        {"ticker": "MSFT", "nome": "Microsoft Corp.", "setor": "Tecnologia"},
-        {"ticker": "GOOGL", "nome": "Alphabet Inc.", "setor": "Tecnologia"},
-        {"ticker": "TSLA", "nome": "Tesla, Inc.", "setor": "Automotivo"},
-        {"ticker": "AMZN", "nome": "Amazon.com", "setor": "Varejo Digital"},
-        {"ticker": "META", "nome": "Meta Platforms", "setor": "Tecnologia"},
-        {"ticker": "V", "nome": "Visa Inc.", "setor": "Financeiro"},
-        {"ticker": "JPM", "nome": "JPMorgan Chase", "setor": "Financeiro"},
-        {"ticker": "KO", "nome": "Coca-Cola Co.", "setor": "Consumo"},
-        {"ticker": "DIS", "nome": "Walt Disney Co.", "setor": "Entretenimento"},
-        {"ticker": "NFLX", "nome": "Netflix, Inc.", "setor": "Entretenimento"},
-        {"ticker": "BINANCE:BTCUSDT", "nome": "Bitcoin", "setor": "Cripto"},
-        {"ticker": "BINANCE:ETHUSDT", "nome": "Ethereum", "setor": "Cripto"}
-    ]
 
 # --- FUNÇÕES DE DADOS ---
 def get_now_local():
