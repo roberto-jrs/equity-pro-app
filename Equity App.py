@@ -162,6 +162,28 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+def get_safe_quote(ticker):
+    try:
+        # O yfinance busca PETR4.SA, AAPL, BTC-USD, etc.
+        data = yf.Ticker(ticker)
+        # Usamos fast_info para ser rápido no seu monitor 4k
+        info = data.fast_info
+        
+        preco = info['last_price']
+        abertura = info['open']
+        
+        # Se não houver preço de abertura, evitamos erro de divisão por zero
+        variacao = ((preco - abertura) / abertura) * 100 if abertura else 0
+        
+        return {
+            "price": preco, 
+            "change": variacao,
+            "status": "success"
+        }
+    except Exception as e:
+        # Se der erro (ex: ticker errado), retorna 0.0 para não quebrar o app
+        return {"price": 0.0, "change": 0.0, "status": "error"}
+
 # --- SIDEBAR ---
 with st.sidebar:
     st.header(idiomas[st.session_state.sel_idioma]["titulo_idioma"])
