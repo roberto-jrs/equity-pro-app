@@ -344,73 +344,61 @@ with c_top2:
 status_label, status_color, status_text = check_market_status()
 st.markdown(f"<div style='background-color: {status_color}; padding: 8px; border-radius: 4px; text-align: center; color: white; font-weight: bold; margin-bottom: 20px; font-size: 0.8rem;'>STATUS: {status_label} | {status_text}</div>", unsafe_allow_html=True)
 
-# --- TERMINAL E CARDS ---
-col_stats1, col_stats2 = st.columns([1, 2])
-with col_stats1:
-    st.subheader(t["alocacao"])
-    df_pizza = pd.DataFrame(st.session_state.meus_ativos) 
-    
-    if filtro_setor != t["todos"]: 
-        df_pizza = df_pizza[df_pizza['setor'] == filtro_setor]
-        
-    fig = px.pie(df_pizza, names='setor', hole=0.4, template="plotly_dark", color_discrete_sequence=px.colors.qualitative.Set2)
-    fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=230, showlegend=False)
-    st.plotly_chart(fig, use_container_width=True, config={'displaylogo': False})
-
-with col_stats2:
-    st.subheader(t["terminal"])
-    st.write(f"{t['monitor']} **{filtro_setor}**")
-    taxa_ex = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
-    simb_m = "BRL" if "BRL" in st.session_state.moeda_save else ("EUR" if "EUR" in st.session_state.moeda_save else "USD")
-    st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {st.session_state.moeda_save}.")
-
+# --- TERMINAL E CARDS (VERSÃO SEGURA) ---
 st.divider()
-ativos_f = st.session_state.meus_ativos if filtro_setor == t["todos"] else [a for a in st.session_state.meus_ativos if a['setor'] == filtro_setor]
 
-cols = st.columns(3)
+# 1. Garante que os ativos existam
+meus_ativos = st.session_state.get('meus_ativos', [])
+filtro_setor = filtro_setor if 'filtro_setor' in locals() else t["todos"]
 
-# Função de conversão simplificada
-def converter(val):
-    if "BRL" in st.session_state.moeda_save: return val * brl_rate, "R$"
-    if "EUR" in st.session_state.moeda_save: return val * eur_rate, "€"
-    return val, "$"
+ativos_f = meus_ativos if filtro_setor == t["todos"] else [a for a in meus_ativos if a.get('setor') == filtro_setor]
 
-for i, ativo in enumerate(ativos_f):
-    with cols[i % 3]:
-        tk = ativo.get('ticker', 'AAPL') # Padrão AAPL se falhar
-        nome = ativo.get('nome', tk)
-        
-        # 1. BUSCA O DADO
-        res_data = get_safe_quote(tk)
-        p_base = res_data["price"]
-        v_base = res_data["change"]
-        
-        # 2. CONVERSÃO (Garante que brl_rate e eur_rate existam)
-        if "BRL" in st.session_state.moeda_save:
-            p_final, simb = p_base * brl_rate, "R$"
-        elif "EUR" in st.session_state.moeda_save:
-            p_final, simb = p_base * eur_rate, "€"
-        else:
-            p_final, simb = p_base, "$"
+if not ativos_f:
+    st.info("Adicione ativos na barra lateral para começar.")
+else:
+    cols = st.columns(3)
+    
+    # Pegamos as taxas de câmbio de forma segura (se falhar, usa 1.0)
+    r_brl = globals().get('brl_rate', 5.60)
+    r_eur = globals().get('eur_rate', 0.92)
+    moeda_ref = st.session_state.get('moeda_save', 'USD')
+    invest_total = st.session_state.get('invest_save', 0)
 
-        # 3. RENDERIZAÇÃO
-        with st.container(border=True):
-            c1, c2 = st.columns([2, 1])
-            c1.markdown(f"**{nome}**")
+    for i, ativo in enumerate(ativos_f):
+        with cols[i % 3]:
+            ticker = ativo.get('ticker', 'INVALID')
+            nome = ativo.get('nome', ticker)
             
-            # Se o preço ainda for 0, mostra o ticker para debug
-            if p_final <= 0:
-                st.warning(f"Sem dados para `{tk}`")
-            else:
-                st.markdown(f"### {simb} {p_final:,.2f}")
-                cor_v = '#26a69a' if v_base >= 0 else '#ef5350'
-                st.markdown(f"<p style='color:{cor_v}; font-weight:bold; margin-top:-15px;'>{'▲' if v_base >= 0 else '▼'} {v_base:.2f}%</p>", unsafe_allow_html=True)
-            
-            # Cálculo de Compra
-            invest = st.session_state.get('invest_save', 1000)
-            qtd = invest / p_final if p_final > 0 else 0
-            st.write(f"Compra: **{qtd:.5f}**")
-            st.caption(f"ID: {tk}")
+            # Busca de preço com tratamento de erro interno
+            try:
+                dados = get_safe_quote(ticker)
+                p_base = dados.get('price', 0)
+                v_base = dados.get('change', 0)
+            except:
+                p_base, v_base = 0, 0
+
+            # Lógica de conversão simples
+            p_conv, simb = p_base, "$"
+            if "BRL" in moeda_ref:
+                p_conv, simb = p_base * r_brl, "R$"
+            elif "EUR" in moeda_ref:
+                p_conv, simb = p_base * r_eur, "€"
+
+            # Renderização do Card
+            with st.container(border=True):
+                st.markdown(f"**{nome}**")
+                
+                if p_conv > 0:
+                    st.markdown(f"### {simb} {p_conv:,.2f}")
+                    cor_v = '#26a69a' if v_base >= 0 else '#ef5350'
+                    st.markdown(f"<p style='color:{cor_v}; font-weight:bold;'>{'▲' if v_base >= 0 else '▼'} {v_base:.2f}%</p>", unsafe_allow_html=True)
+                    
+                    qtd = invest_total / p_conv if p_conv > 0 else 0
+                    st.write(f"Compra: **{qtd:.4f}**")
+                else:
+                    st.warning(f"Aguardando: {ticker}")
+                
+                st.caption(f"ID: `{ticker}`")
             
             # --- EXPANDER PARA O GRÁFICO ---
             # O 'expanded' agora obedece ao estado global do botão de abrir/fechar tudo
