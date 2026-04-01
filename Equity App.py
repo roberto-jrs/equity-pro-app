@@ -264,36 +264,26 @@ def get_now_local():
 
 @st.cache_data(ttl=10) # Cache curto para não travar o "Live"
 def get_safe_quote(ticker):
-    """Motor de busca de alta performance para o Streamlit Cloud."""
+    """Busca ultra-direta sem firulas para destravar o valor."""
     try:
-        # 1. TENTA FINNHUB PRIMEIRO (É instantâneo e não bloqueia IP fácil)
-        # Importante: Finnhub precisa do ticker puro (ex: AAPL)
-        res = finnhub_client.quote(ticker)
-        p = float(res.get('c', 0))
-        v = float(res.get('dp', 0))
-
-        # 2. SE FOR ZERO (Ativo Brasileiro ou erro no Finnhub), tenta Yahoo de um jeito LEVE
-        if p <= 0:
-            # Forçamos o sufixo .SA se for brasileiro e não tiver
-            if len(ticker) <= 6 and not ticker.endswith(".SA") and ":" not in ticker:
-                ticker = f"{ticker}.SA"
+        # Tenta Yahoo Finance que é mais global
+        stock = yf.Ticker(ticker)
+        # Tenta pegar o preço de 3 formas diferentes
+        price = stock.fast_info.get('last_price', 0)
+        
+        if price == 0 or price is None:
+            hist = stock.history(period="1d")
+            price = hist['Close'].iloc[-1] if not hist.empty else 0
             
-            # Usamos o fast_info mas com um TRY interno
-            y_tk = yf.Ticker(ticker)
-            p = float(y_tk.fast_info.get('last_price', 0))
-            
-            # Se ainda assim for zero, tentamos o history de 1 dia (última cartada)
-            if p <= 0:
-                h = y_tk.history(period="1d")
-                p = float(h['Close'].iloc[-1]) if not h.empty else 0.0
-                v = 0.0 # Variação zerada para evitar erro de cálculo
-            else:
-                prev = y_tk.fast_info.get('previous_close', p)
-                v = ((p - prev) / prev) * 100 if prev != 0 else 0
-
-        return {"price": p, "change": v}
-    except Exception:
-        return {"price": 0.0, "change": 0.0}
+        change = stock.fast_info.get('day_change_percent', 0)
+        return {"price": float(price), "change": float(change)}
+    except:
+        # Se tudo falhar, tenta Finnhub como última esperança
+        try:
+            res = finnhub_client.quote(ticker)
+            return {"price": float(res.get('c', 0)), "change": float(res.get('dp', 0))}
+        except:
+            return {"price": 0.0, "change": 0.0}
 
 def check_market_status():
     ny_now = datetime.now(pytz.timezone('America/New_York'))
@@ -387,57 +377,40 @@ def converter(val):
 
 for i, ativo in enumerate(ativos_f):
     with cols[i % 3]:
-        ticker = ativo['ticker']
+        tk = ativo.get('ticker', 'AAPL') # Padrão AAPL se falhar
+        nome = ativo.get('nome', tk)
         
-        # --- SEGURANÇA: Limpa as variáveis para cada novo card ---
-        price = 0.0
-        var = 0.0
-        label_status = "BUSCANDO..."
+        # 1. BUSCA O DADO
+        res_data = get_safe_quote(tk)
+        p_base = res_data["price"]
+        v_base = res_data["change"]
         
-        # 1. TENTA PEGAR DADOS LIVE
-        data_live = st.session_state.live_data.get(ticker)
-        
-        if data_live:
-            price = data_live.get('price', 0)
-            var = data_live.get('change', 0)
-            label_status = "LIVE"
+        # 2. CONVERSÃO (Garante que brl_rate e eur_rate existam)
+        if "BRL" in st.session_state.moeda_save:
+            p_final, simb = p_base * brl_rate, "R$"
+        elif "EUR" in st.session_state.moeda_save:
+            p_final, simb = p_base * eur_rate, "€"
         else:
-            # Chama a função que corrigimos com o .history()
-            q = get_safe_quote(ticker)
-            price = q.get('price', 0)
-            var = q.get('change', 0)
-            label_status = t.get("historico", "HISTÓRICO")
+            p_final, simb = p_base, "$"
 
-        # 2. CONVERSÃO E EXIBIÇÃO
-        # Só converte se o preço for maior que zero
-        if price > 0:
-            p_conv, simb = converter(price)
-        else:
-            p_conv, simb = 0.0, "$" # Fallback para não dar erro de divisão
-
+        # 3. RENDERIZAÇÃO
         with st.container(border=True):
-            ch, cs = st.columns([2, 1])
-            ch.markdown(f"**{ativo['nome']}**")
+            c1, c2 = st.columns([2, 1])
+            c1.markdown(f"**{nome}**")
             
-            # Badge de Status (Dinâmico)
-            cor_badge = '#26a69a' if label_status == 'LIVE' else '#546e7a'
-            cs.markdown(f"<span style='background:{cor_badge}; color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;'>{label_status}</span>", unsafe_allow_html=True)
-            
-            # Exibição do Preço (Só mostra se for válido)
-            if p_conv > 0:
-                st.markdown(f"### {simb} {p_conv:,.2f}")
-                cor_var = '#26a69a' if var >= 0 else '#ef5350'
-                seta = '▲' if var >= 0 else '▼'
-                st.markdown(f"<p style='color:{cor_var}; font-weight:bold; margin-top:-15px;'>{seta} {var:.2f}%</p>", unsafe_allow_html=True)
+            # Se o preço ainda for 0, mostra o ticker para debug
+            if p_final <= 0:
+                st.warning(f"Sem dados para `{tk}`")
             else:
-                st.info("Carregando cotação...") # Mensagem amigável enquanto o Yahoo responde
+                st.markdown(f"### {simb} {p_final:,.2f}")
+                cor_v = '#26a69a' if v_base >= 0 else '#ef5350'
+                st.markdown(f"<p style='color:{cor_v}; font-weight:bold; margin-top:-15px;'>{'▲' if v_base >= 0 else '▼'} {v_base:.2f}%</p>", unsafe_allow_html=True)
             
             # Cálculo de Compra
-            invest_atual = st.session_state.invest_save
-            qtd_compra = invest_atual / p_conv if p_conv > 0 else 0
-            
-            st.write(f"{t['compra']} **{qtd_compra:.5f}**")
-            st.caption(f"Code: `{ticker}`")
+            invest = st.session_state.get('invest_save', 1000)
+            qtd = invest / p_final if p_final > 0 else 0
+            st.write(f"Compra: **{qtd:.5f}**")
+            st.caption(f"ID: {tk}")
             
             # --- EXPANDER PARA O GRÁFICO ---
             # O 'expanded' agora obedece ao estado global do botão de abrir/fechar tudo
