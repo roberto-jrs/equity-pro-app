@@ -262,42 +262,36 @@ with st.sidebar:
 def get_now_local():
     return datetime.now(pytz.utc).astimezone(pytz.timezone(st.session_state.sel_fuso))
 
-@st.cache_data(ttl=20) # Cache levemente maior para estabilidade
+@st.cache_data(ttl=10) # Cache curto para não travar o "Live"
 def get_safe_quote(ticker):
-    """Busca preço ultra-resiliente usando Finnhub ou Yahoo History."""
-    p_final = 0.0
-    v_final = 0.0
-    
+    """Motor de busca de alta performance para o Streamlit Cloud."""
     try:
-        # 1. TENTATIVA COM FINNHUB (Ótimo para Apple, Tesla, etc.)
+        # 1. TENTA FINNHUB PRIMEIRO (É instantâneo e não bloqueia IP fácil)
+        # Importante: Finnhub precisa do ticker puro (ex: AAPL)
         res = finnhub_client.quote(ticker)
-        p_final = float(res.get('c', 0))
-        v_final = float(res.get('dp', 0))
+        p = float(res.get('c', 0))
+        v = float(res.get('dp', 0))
 
-        # 2. SE FINNHUB DER ZERO OU FALHAR, VAI PRO YAHOO HISTORY (Melhor para PETR4.SA, etc.)
-        if p_final <= 0:
-            yf_asset = yf.Ticker(ticker)
-            # Buscamos os últimos 2 dias para garantir o cálculo da variação
-            hist = yf_asset.history(period="2d", interval="1d")
+        # 2. SE FOR ZERO (Ativo Brasileiro ou erro no Finnhub), tenta Yahoo de um jeito LEVE
+        if p <= 0:
+            # Forçamos o sufixo .SA se for brasileiro e não tiver
+            if len(ticker) <= 6 and not ticker.endswith(".SA") and ":" not in ticker:
+                ticker = f"{ticker}.SA"
             
-            if not hist.empty:
-                p_final = float(hist['Close'].iloc[-1])
-                
-                # Se tivermos dois dias de dados, calculamos a variação real
-                if len(hist) > 1:
-                    preco_anterior = hist['Close'].iloc[-2]
-                    v_final = ((p_final - preco_anterior) / preco_anterior) * 100
-                else:
-                    v_final = 0.0
+            # Usamos o fast_info mas com um TRY interno
+            y_tk = yf.Ticker(ticker)
+            p = float(y_tk.fast_info.get('last_price', 0))
+            
+            # Se ainda assim for zero, tentamos o history de 1 dia (última cartada)
+            if p <= 0:
+                h = y_tk.history(period="1d")
+                p = float(h['Close'].iloc[-1]) if not h.empty else 0.0
+                v = 0.0 # Variação zerada para evitar erro de cálculo
             else:
-                # Tentativa final caso history falhe (último recurso)
-                p_final = float(yf_asset.fast_info.get('last_price', 0))
-                v_final = 0.0
+                prev = y_tk.fast_info.get('previous_close', p)
+                v = ((p - prev) / prev) * 100 if prev != 0 else 0
 
-        return {
-            "price": round(p_final, 2),
-            "change": round(v_final, 2)
-        }
+        return {"price": p, "change": v}
     except Exception:
         return {"price": 0.0, "change": 0.0}
 
