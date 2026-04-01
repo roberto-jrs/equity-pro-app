@@ -258,52 +258,28 @@ with st.sidebar:
     filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
 
 # --- FUNÇÕES DE DADOS ---
-
 def get_now_local():
     return datetime.now(pytz.utc).astimezone(pytz.timezone(st.session_state.sel_fuso))
 
-@st.cache_data(ttl=10) # Cache curto para não travar o "Live"
+@st.cache_data(ttl=5) # Reduzido para 5s para acompanhar o refresh
 def get_safe_quote(ticker):
-    """Busca ultra-direta sem firulas para destravar o valor."""
-    try:
-        # Tenta Yahoo Finance que é mais global
-        stock = yf.Ticker(ticker)
-        # Tenta pegar o preço de 3 formas diferentes
-        price = stock.fast_info.get('last_price', 0)
-        
-        if price == 0 or price is None:
-            hist = stock.history(period="1d")
-            price = hist['Close'].iloc[-1] if not hist.empty else 0
-            
-        change = stock.fast_info.get('day_change_percent', 0)
-        return {"price": float(price), "change": float(change)}
-    except:
-        # Se tudo falhar, tenta Finnhub como última esperança
-        try:
-            res = finnhub_client.quote(ticker)
-            return {"price": float(res.get('c', 0)), "change": float(res.get('dp', 0))}
-        except:
-            return {"price": 0.0, "change": 0.0}
+    try: return finnhub_client.quote(ticker)
+    except: return {"c": 0, "pc": 0}
 
 def check_market_status():
     ny_now = datetime.now(pytz.timezone('America/New_York'))
     is_weekday = ny_now.weekday() < 5 
-    is_hours = (ny_now.hour > 9 or (ny_now.hour == 9 and ny_now.minute >= 30)) and (ny_now.hour < 16)
-    
-    if is_weekday and is_hours:
-        return ("ON", "#26a69a", t["status_on"])
-    else:
-        return ("OFF", "#ef5350", t["status_off"])
+    is_hours = ny_now.hour >= 9 and (ny_now.hour < 16 or (ny_now.hour == 16 and ny_now.minute == 0))
+    if ny_now.hour == 9 and ny_now.minute < 30: is_hours = False
+    return ("ON", "#26a69a", t["status_on"]) if (is_weekday and is_hours) else ("OFF", "#ef5350", t["status_off"])
 
 @st.cache_data(ttl=3600)
 def get_rates():
     try:
-        # Usamos history aqui também para o câmbio, pois é mais seguro em nuvem
-        usd_brl = yf.Ticker("USDBRL=X").history(period="1d")['Close'].iloc[-1]
-        usd_eur = yf.Ticker("EUR=X").history(period="1d")['Close'].iloc[-1]
-        return float(usd_brl), float(usd_eur)
-    except:
-        return 5.60, 0.92 # Backup atualizado para 2026
+        usd_brl = yf.Ticker("USDBRL=X").fast_info['last_price']
+        usd_eur = yf.Ticker("EUR=X").fast_info['last_price']
+        return usd_brl, usd_eur
+    except: return 5.15, 0.92
 
 brl_rate, eur_rate = get_rates()
 
@@ -344,61 +320,95 @@ with c_top2:
 status_label, status_color, status_text = check_market_status()
 st.markdown(f"<div style='background-color: {status_color}; padding: 8px; border-radius: 4px; text-align: center; color: white; font-weight: bold; margin-bottom: 20px; font-size: 0.8rem;'>STATUS: {status_label} | {status_text}</div>", unsafe_allow_html=True)
 
-# --- TERMINAL E CARDS (VERSÃO SEGURA) ---
-st.divider()
-
-# 1. Garante que os ativos existam
-meus_ativos = st.session_state.get('meus_ativos', [])
-filtro_setor = filtro_setor if 'filtro_setor' in locals() else t["todos"]
-
-ativos_f = meus_ativos if filtro_setor == t["todos"] else [a for a in meus_ativos if a.get('setor') == filtro_setor]
-
-if not ativos_f:
-    st.info("Adicione ativos na barra lateral para começar.")
-else:
-    cols = st.columns(3)
+# --- TERMINAL E CARDS ---
+col_stats1, col_stats2 = st.columns([1, 2])
+with col_stats1:
+    st.subheader(t["alocacao"])
+    # ALTERADO AQUI: O gráfico de pizza agora reflete os ativos da sua sessão
+    df_pizza = pd.DataFrame(st.session_state.meus_ativos) 
     
-    # Pegamos as taxas de câmbio de forma segura (se falhar, usa 1.0)
-    r_brl = globals().get('brl_rate', 5.60)
-    r_eur = globals().get('eur_rate', 0.92)
-    moeda_ref = st.session_state.get('moeda_save', 'USD')
-    invest_total = st.session_state.get('invest_save', 0)
+    if filtro_setor != t["todos"]: 
+        df_pizza = df_pizza[df_pizza['setor'] == filtro_setor]
+        
+    fig = px.pie(df_pizza, names='setor', hole=0.4, template="plotly_dark", color_discrete_sequence=px.colors.qualitative.Set2)
+    fig.update_layout(margin=dict(l=0, r=0, t=10, b=0), height=230, showlegend=False)
+    st.plotly_chart(fig, use_container_width=True, config={'displaylogo': False})
 
-    for i, ativo in enumerate(ativos_f):
-        with cols[i % 3]:
-            ticker = ativo.get('ticker', 'INVALID')
-            nome = ativo.get('nome', ticker)
+with col_stats2:
+    st.subheader(t["terminal"])
+    st.write(f"{t['monitor']} **{filtro_setor}**")
+    taxa_ex = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1.0)
+    simb_m = "BRL" if "BRL" in st.session_state.moeda_save else ("EUR" if "EUR" in st.session_state.moeda_save else "USD")
+    st.info(f"{t['info_cambio']} **1 USD = {taxa_ex:.2f} {simb_m}**. {t['info_detalhe']} {st.session_state.moeda_save}.")
+
+st.divider()
+ativos_f = st.session_state.meus_ativos if filtro_setor == t["todos"] else [a for a in st.session_state.meus_ativos if a['setor'] == filtro_setor]
+
+cols = st.columns(3)
+def converter(val):
+    if "BRL" in st.session_state.moeda_save: return val * brl_rate, "R$"
+    if "EUR" in st.session_state.moeda_save: return val * eur_rate, "€"
+    return val, "$"
+
+for i, ativo in enumerate(ativos_f):
+    with cols[i % 3]:
+        ticker = ativo['ticker']
+        
+        # 1. TENTA PEGAR DADOS LIVE (Se existirem)
+        data_live = st.session_state.live_data.get(ticker)
+        
+        # 2. SE NÃO TIVER LIVE (Caso da Petrobras nova), BUSCA NO YAHOO
+        if not data_live:
+            q = get_safe_quote(ticker)
+            price = q.get('price', 0)
+            var = q.get('change', 0)
+            label_status = t.get("historico", "HISTÓRICO")
+            time_ref = "YF-Data"
+        else:
+            # Se existirem dados Live, usa eles
+            price = data_live.get('price', 0)
+            var = data_live.get('change', 0)
+            label_status = "LIVE"
+            time_ref = data_live.get('time', "--:--")
+
+        # 3. CONVERSÃO E EXIBIÇÃO (O resto do seu código de card continua igual)
+        p_conv, simb = converter(price)
+        
+        data_live = st.session_state.live_data.get(ticker)
+        
+        if data_live:
+            price = data_live.get('price', 0)
+            var = data_live.get('change', 0)
+            label_status = "LIVE"
+        else:
+            # Tenta 'price' (YF), se não achar tenta 'c' (Finnhub)
+            price = q.get('price', q.get('c', 0))
+            var = q.get('change', q.get('dp', 0))
+            label_status = t.get("historico", "HISTÓRICO")
+
+        # 4. CONVERSÃO E EXIBIÇÃO
+        p_conv, simb = converter(price)
+        
+        with st.container(border=True):
+            ch, cs = st.columns([2, 1])
+            ch.markdown(f"**{ativo['nome']}**")
             
-            # Busca de preço com tratamento de erro interno
-            try:
-                dados = get_safe_quote(ticker)
-                p_base = dados.get('price', 0)
-                v_base = dados.get('change', 0)
-            except:
-                p_base, v_base = 0, 0
-
-            # Lógica de conversão simples
-            p_conv, simb = p_base, "$"
-            if "BRL" in moeda_ref:
-                p_conv, simb = p_base * r_brl, "R$"
-            elif "EUR" in moeda_ref:
-                p_conv, simb = p_base * r_eur, "€"
-
-            # Renderização do Card
-            with st.container(border=True):
-                st.markdown(f"**{nome}**")
-                
-                if p_conv > 0:
-                    st.markdown(f"### {simb} {p_conv:,.2f}")
-                    cor_v = '#26a69a' if v_base >= 0 else '#ef5350'
-                    st.markdown(f"<p style='color:{cor_v}; font-weight:bold;'>{'▲' if v_base >= 0 else '▼'} {v_base:.2f}%</p>", unsafe_allow_html=True)
-                    
-                    qtd = invest_total / p_conv if p_conv > 0 else 0
-                    st.write(f"Compra: **{qtd:.4f}**")
-                else:
-                    st.warning(f"Aguardando: {ticker}")
-                
-                st.caption(f"ID: `{ticker}`")
+            cor_badge = '#26a69a' if label_status == 'LIVE' else '#546e7a'
+            cs.markdown(f"<span style='background:{cor_badge}; color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;'>{label_status}</span>", unsafe_allow_html=True)
+            
+            st.markdown(f"### {simb} {p_conv:,.2f}")
+            
+            cor_var = '#26a69a' if var >= 0 else '#ef5350'
+            seta = '▲' if var >= 0 else '▼'
+            st.markdown(f"<p style='color:{cor_var}; font-weight:bold; margin-top:-15px;'>{seta} {var:.2f}%</p>", unsafe_allow_html=True)
+            
+            # Cálculo de Compra (Proteção contra divisão por zero)
+            taxa_c = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1)
+            invest_atual = st.session_state.invest_save
+            qtd_compra = (invest_atual / taxa_c) / price if price > 0 else 0
+            st.write(f"{t['compra']} **{qtd_compra:.5f}**")
+            
+            st.caption(f"Code: `{ticker}`")
             
             # --- EXPANDER PARA O GRÁFICO ---
             # O 'expanded' agora obedece ao estado global do botão de abrir/fechar tudo
