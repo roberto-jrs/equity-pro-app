@@ -258,28 +258,63 @@ with st.sidebar:
     filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
 
 # --- FUNÇÕES DE DADOS ---
+
 def get_now_local():
     return datetime.now(pytz.utc).astimezone(pytz.timezone(st.session_state.sel_fuso))
 
-@st.cache_data(ttl=5) # Reduzido para 5s para acompanhar o refresh
+@st.cache_data(ttl=15) # Aumentei para 15s para não sobrecarregar as APIs no autorefresh
 def get_safe_quote(ticker):
-    try: return finnhub_client.quote(ticker)
-    except: return {"c": 0, "pc": 0}
+    """Busca preço no Finnhub e, se falhar/zerar, busca no Yahoo Finance."""
+    try:
+        # 1. TENTATIVA COM FINNHUB
+        res = finnhub_client.quote(ticker)
+        price = res.get('c', 0)
+        change = res.get('dp', 0)
+
+        # 2. SE FINNHUB DER ZERO (Comum para ativos .SA ou fora do plano free)
+        if price == 0:
+            yf_asset = yf.Ticker(ticker)
+            info = yf_asset.fast_info
+            
+            # Pegamos o último preço disponível
+            price = info.get('last_price', 0)
+            
+            # Cálculo da variação percentual (Change %)
+            prev_close = info.get('previous_close', price)
+            if prev_close != 0:
+                change = ((price - prev_close) / prev_close) * 100
+            else:
+                change = 0
+
+        return {
+            "price": float(price) if price else 0.0,
+            "change": float(change) if change else 0.0
+        }
+    except Exception as e:
+        # Em caso de erro total, retorna zerado para não quebrar o App
+        return {"price": 0.0, "change": 0.0}
 
 def check_market_status():
     ny_now = datetime.now(pytz.timezone('America/New_York'))
     is_weekday = ny_now.weekday() < 5 
-    is_hours = ny_now.hour >= 9 and (ny_now.hour < 16 or (ny_now.hour == 16 and ny_now.minute == 0))
-    if ny_now.hour == 9 and ny_now.minute < 30: is_hours = False
-    return ("ON", "#26a69a", t["status_on"]) if (is_weekday and is_hours) else ("OFF", "#ef5350", t["status_off"])
+    # Mercado NY: 09:30 às 16:00
+    is_hours = (ny_now.hour > 9 or (ny_now.hour == 9 and ny_now.minute >= 30)) and (ny_now.hour < 16)
+    
+    if is_weekday and is_hours:
+        return ("ON", "#26a69a", t["status_on"])
+    else:
+        return ("OFF", "#ef5350", t["status_off"])
 
 @st.cache_data(ttl=3600)
 def get_rates():
     try:
+        # Busca cotação atualizada do dólar e euro
         usd_brl = yf.Ticker("USDBRL=X").fast_info['last_price']
         usd_eur = yf.Ticker("EUR=X").fast_info['last_price']
         return usd_brl, usd_eur
-    except: return 5.15, 0.92
+    except:
+        # Valores de backup caso a API de câmbio falhe
+        return 5.15, 0.92
 
 brl_rate, eur_rate = get_rates()
 
@@ -324,7 +359,6 @@ st.markdown(f"<div style='background-color: {status_color}; padding: 8px; border
 col_stats1, col_stats2 = st.columns([1, 2])
 with col_stats1:
     st.subheader(t["alocacao"])
-    # ALTERADO AQUI: O gráfico de pizza agora reflete os ativos da sua sessão
     df_pizza = pd.DataFrame(st.session_state.meus_ativos) 
     
     if filtro_setor != t["todos"]: 
@@ -345,6 +379,8 @@ st.divider()
 ativos_f = st.session_state.meus_ativos if filtro_setor == t["todos"] else [a for a in st.session_state.meus_ativos if a['setor'] == filtro_setor]
 
 cols = st.columns(3)
+
+# Função de conversão simplificada
 def converter(val):
     if "BRL" in st.session_state.moeda_save: return val * brl_rate, "R$"
     if "EUR" in st.session_state.moeda_save: return val * eur_rate, "€"
@@ -354,26 +390,7 @@ for i, ativo in enumerate(ativos_f):
     with cols[i % 3]:
         ticker = ativo['ticker']
         
-        # 1. TENTA PEGAR DADOS LIVE (Se existirem)
-        data_live = st.session_state.live_data.get(ticker)
-        
-        # 2. SE NÃO TIVER LIVE (Caso da Petrobras nova), BUSCA NO YAHOO
-        if not data_live:
-            q = get_safe_quote(ticker)
-            price = q.get('price', 0)
-            var = q.get('change', 0)
-            label_status = t.get("historico", "HISTÓRICO")
-            time_ref = "YF-Data"
-        else:
-            # Se existirem dados Live, usa eles
-            price = data_live.get('price', 0)
-            var = data_live.get('change', 0)
-            label_status = "LIVE"
-            time_ref = data_live.get('time', "--:--")
-
-        # 3. CONVERSÃO E EXIBIÇÃO (O resto do seu código de card continua igual)
-        p_conv, simb = converter(price)
-        
+        # --- LÓGICA DE CAPTURA DE PREÇO ÚNICA ---
         data_live = st.session_state.live_data.get(ticker)
         
         if data_live:
@@ -381,12 +398,13 @@ for i, ativo in enumerate(ativos_f):
             var = data_live.get('change', 0)
             label_status = "LIVE"
         else:
-            # Tenta 'price' (YF), se não achar tenta 'c' (Finnhub)
-            price = q.get('price', q.get('c', 0))
-            var = q.get('change', q.get('dp', 0))
+            # Chama a função híbrida que corrigimos antes
+            q = get_safe_quote(ticker)
+            price = q.get('price', 0)
+            var = q.get('change', 0)
             label_status = t.get("historico", "HISTÓRICO")
 
-        # 4. CONVERSÃO E EXIBIÇÃO
+        # --- CONVERSÃO E EXIBIÇÃO ---
         p_conv, simb = converter(price)
         
         with st.container(border=True):
@@ -402,12 +420,12 @@ for i, ativo in enumerate(ativos_f):
             seta = '▲' if var >= 0 else '▼'
             st.markdown(f"<p style='color:{cor_var}; font-weight:bold; margin-top:-15px;'>{seta} {var:.2f}%</p>", unsafe_allow_html=True)
             
-            # Cálculo de Compra (Proteção contra divisão por zero)
-            taxa_c = brl_rate if "BRL" in st.session_state.moeda_save else (eur_rate if "EUR" in st.session_state.moeda_save else 1)
+            # Cálculo de Compra (Baseado na moeda selecionada)
             invest_atual = st.session_state.invest_save
-            qtd_compra = (invest_atual / taxa_c) / price if price > 0 else 0
-            st.write(f"{t['compra']} **{qtd_compra:.5f}**")
+            # Se o preço já está convertido para a moeda do usuário, dividimos direto o capital
+            qtd_compra = invest_atual / p_conv if p_conv > 0 else 0
             
+            st.write(f"{t['compra']} **{qtd_compra:.5f}**")
             st.caption(f"Code: `{ticker}`")
             
             # --- EXPANDER PARA O GRÁFICO ---
