@@ -262,42 +262,48 @@ with st.sidebar:
 def get_now_local():
     return datetime.now(pytz.utc).astimezone(pytz.timezone(st.session_state.sel_fuso))
 
-@st.cache_data(ttl=15) # Aumentei para 15s para não sobrecarregar as APIs no autorefresh
+@st.cache_data(ttl=20) # Cache levemente maior para estabilidade
 def get_safe_quote(ticker):
-    """Busca preço no Finnhub e, se falhar/zerar, busca no Yahoo Finance."""
+    """Busca preço ultra-resiliente usando Finnhub ou Yahoo History."""
+    p_final = 0.0
+    v_final = 0.0
+    
     try:
-        # 1. TENTATIVA COM FINNHUB
+        # 1. TENTATIVA COM FINNHUB (Ótimo para Apple, Tesla, etc.)
         res = finnhub_client.quote(ticker)
-        price = res.get('c', 0)
-        change = res.get('dp', 0)
+        p_final = float(res.get('c', 0))
+        v_final = float(res.get('dp', 0))
 
-        # 2. SE FINNHUB DER ZERO (Comum para ativos .SA ou fora do plano free)
-        if price == 0:
+        # 2. SE FINNHUB DER ZERO OU FALHAR, VAI PRO YAHOO HISTORY (Melhor para PETR4.SA, etc.)
+        if p_final <= 0:
             yf_asset = yf.Ticker(ticker)
-            info = yf_asset.fast_info
+            # Buscamos os últimos 2 dias para garantir o cálculo da variação
+            hist = yf_asset.history(period="2d", interval="1d")
             
-            # Pegamos o último preço disponível
-            price = info.get('last_price', 0)
-            
-            # Cálculo da variação percentual (Change %)
-            prev_close = info.get('previous_close', price)
-            if prev_close != 0:
-                change = ((price - prev_close) / prev_close) * 100
+            if not hist.empty:
+                p_final = float(hist['Close'].iloc[-1])
+                
+                # Se tivermos dois dias de dados, calculamos a variação real
+                if len(hist) > 1:
+                    preco_anterior = hist['Close'].iloc[-2]
+                    v_final = ((p_final - preco_anterior) / preco_anterior) * 100
+                else:
+                    v_final = 0.0
             else:
-                change = 0
+                # Tentativa final caso history falhe (último recurso)
+                p_final = float(yf_asset.fast_info.get('last_price', 0))
+                v_final = 0.0
 
         return {
-            "price": float(price) if price else 0.0,
-            "change": float(change) if change else 0.0
+            "price": round(p_final, 2),
+            "change": round(v_final, 2)
         }
-    except Exception as e:
-        # Em caso de erro total, retorna zerado para não quebrar o App
+    except Exception:
         return {"price": 0.0, "change": 0.0}
 
 def check_market_status():
     ny_now = datetime.now(pytz.timezone('America/New_York'))
     is_weekday = ny_now.weekday() < 5 
-    # Mercado NY: 09:30 às 16:00
     is_hours = (ny_now.hour > 9 or (ny_now.hour == 9 and ny_now.minute >= 30)) and (ny_now.hour < 16)
     
     if is_weekday and is_hours:
@@ -308,13 +314,12 @@ def check_market_status():
 @st.cache_data(ttl=3600)
 def get_rates():
     try:
-        # Busca cotação atualizada do dólar e euro
-        usd_brl = yf.Ticker("USDBRL=X").fast_info['last_price']
-        usd_eur = yf.Ticker("EUR=X").fast_info['last_price']
-        return usd_brl, usd_eur
+        # Usamos history aqui também para o câmbio, pois é mais seguro em nuvem
+        usd_brl = yf.Ticker("USDBRL=X").history(period="1d")['Close'].iloc[-1]
+        usd_eur = yf.Ticker("EUR=X").history(period="1d")['Close'].iloc[-1]
+        return float(usd_brl), float(usd_eur)
     except:
-        # Valores de backup caso a API de câmbio falhe
-        return 5.15, 0.92
+        return 5.60, 0.92 # Backup atualizado para 2026
 
 brl_rate, eur_rate = get_rates()
 
@@ -390,7 +395,12 @@ for i, ativo in enumerate(ativos_f):
     with cols[i % 3]:
         ticker = ativo['ticker']
         
-        # --- LÓGICA DE CAPTURA DE PREÇO ÚNICA ---
+        # --- SEGURANÇA: Limpa as variáveis para cada novo card ---
+        price = 0.0
+        var = 0.0
+        label_status = "BUSCANDO..."
+        
+        # 1. TENTA PEGAR DADOS LIVE
         data_live = st.session_state.live_data.get(ticker)
         
         if data_live:
@@ -398,31 +408,38 @@ for i, ativo in enumerate(ativos_f):
             var = data_live.get('change', 0)
             label_status = "LIVE"
         else:
-            # Chama a função híbrida que corrigimos antes
+            # Chama a função que corrigimos com o .history()
             q = get_safe_quote(ticker)
             price = q.get('price', 0)
             var = q.get('change', 0)
             label_status = t.get("historico", "HISTÓRICO")
 
-        # --- CONVERSÃO E EXIBIÇÃO ---
-        p_conv, simb = converter(price)
-        
+        # 2. CONVERSÃO E EXIBIÇÃO
+        # Só converte se o preço for maior que zero
+        if price > 0:
+            p_conv, simb = converter(price)
+        else:
+            p_conv, simb = 0.0, "$" # Fallback para não dar erro de divisão
+
         with st.container(border=True):
             ch, cs = st.columns([2, 1])
             ch.markdown(f"**{ativo['nome']}**")
             
+            # Badge de Status (Dinâmico)
             cor_badge = '#26a69a' if label_status == 'LIVE' else '#546e7a'
             cs.markdown(f"<span style='background:{cor_badge}; color:white; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;'>{label_status}</span>", unsafe_allow_html=True)
             
-            st.markdown(f"### {simb} {p_conv:,.2f}")
+            # Exibição do Preço (Só mostra se for válido)
+            if p_conv > 0:
+                st.markdown(f"### {simb} {p_conv:,.2f}")
+                cor_var = '#26a69a' if var >= 0 else '#ef5350'
+                seta = '▲' if var >= 0 else '▼'
+                st.markdown(f"<p style='color:{cor_var}; font-weight:bold; margin-top:-15px;'>{seta} {var:.2f}%</p>", unsafe_allow_html=True)
+            else:
+                st.info("Carregando cotação...") # Mensagem amigável enquanto o Yahoo responde
             
-            cor_var = '#26a69a' if var >= 0 else '#ef5350'
-            seta = '▲' if var >= 0 else '▼'
-            st.markdown(f"<p style='color:{cor_var}; font-weight:bold; margin-top:-15px;'>{seta} {var:.2f}%</p>", unsafe_allow_html=True)
-            
-            # Cálculo de Compra (Baseado na moeda selecionada)
+            # Cálculo de Compra
             invest_atual = st.session_state.invest_save
-            # Se o preço já está convertido para a moeda do usuário, dividimos direto o capital
             qtd_compra = invest_atual / p_conv if p_conv > 0 else 0
             
             st.write(f"{t['compra']} **{qtd_compra:.5f}**")
