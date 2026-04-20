@@ -13,17 +13,17 @@ from streamlit_autorefresh import st_autorefresh
 st.set_page_config(page_title="Equity Pro - Terminal", layout="wide", page_icon="▣")
 
 # ===================================================================
-# 2. CONFIGURAÇÃO DA API (USE ST.SECRETS EM PRODUÇÃO)
+# 2. CONFIGURAÇÃO DA API (USANDO ST.SECRETS)
 # ===================================================================
-# Para maior segurança, crie um arquivo .streamlit/secrets.toml com:
-# FINNHUB_KEY = "sua-chave-aqui"
-# Se não existir, usamos uma variável de ambiente ou a chave fixa (não recomendado).
 try:
     FINNHUB_KEY = st.secrets["FINNHUB_KEY"]
 except Exception:
-    # Fallback apenas para demonstração - NUNCA use chaves fixas em produção!
-    FINNHUB_KEY = "d6p1sfhr01qk3chijap0d6p1sfhr01qk3chijapg"
-    st.warning("⚠️ Chave da API exposta no código. Configure st.secrets para maior segurança.")
+    # Se não houver segredo, tenta variável de ambiente (para execução local)
+    import os
+    FINNHUB_KEY = os.getenv("FINNHUB_KEY")
+    if not FINNHUB_KEY:
+        st.error("❌ Chave da API não encontrada. Configure st.secrets ou a variável de ambiente FINNHUB_KEY.")
+        st.stop()
 
 finnhub_client = Client(api_key=FINNHUB_KEY)
 
