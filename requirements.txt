@@ -1,10 +1,8 @@
 streamlit
 pandas
-websocket-client
 finnhub-python
 pytz
 yfinance
 plotly
 streamlit-autorefresh
 numpy==1.26.3
-pandas_ta==0.3.14b0
