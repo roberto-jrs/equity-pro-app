@@ -88,7 +88,7 @@ if 'meus_ativos' not in st.session_state:
     ]
 
 # ===================================================================
-# 5. TRADUÇÃO (compactada)
+# 5. TRADUÇÃO (completa, incluindo textos do botão expandir)
 # ===================================================================
 idiomas = {
     "English": {
@@ -99,8 +99,8 @@ idiomas = {
         "monitor": "Monitoring assets in sector:", "info_cambio": "Exchange rate:",
         "info_detalhe": "Purchase calculation based on", "quantidade_sugerida": "Suggested quantity:",
         "atualizar": "⟲ Refresh", "historico": "HISTORICAL", "subtitulo": "Strategic Analysis & Clarity",
-        "ultima_at": "Last update:", "grafico_h": "Technical Charts", "btn_expandir": "📈 Expand",
-        "btn_recolher": "📐 Collapse", "help_graficos": "Expand/Collapse charts",
+        "ultima_at": "Last update:", "grafico_h": "Technical Charts", "btn_expandir": "📈 Expand All",
+        "btn_recolher": "📐 Collapse All", "help_graficos": "Expand/Collapse all charts",
         "alertas_titulo": "🔔 Price Alerts", "criar_alerta": "Create Alert",
         "ticker_alerta": "Ticker", "preco_alerta": "Target Price",
         "acima_abaixo": "When price goes", "acima": "above", "abaixo": "below",
@@ -116,7 +116,8 @@ idiomas = {
         "quantidade_sugerida": "Quantidade sugerida:",
         "atualizar": "⟲ Atualizar", "historico": "HISTÓRICO", "subtitulo": "Análise Estratégica e Clareza",
         "ultima_at": "Última atualização:", "grafico_h": "Gráficos Técnicos",
-        "btn_expandir": "📈 Expandir", "btn_recolher": "📐 Recolher", "help_graficos": "Expandir/Recolher",
+        "btn_expandir": "📈 Expandir Todos", "btn_recolher": "📐 Recolher Todos",
+        "help_graficos": "Expandir/Recolher todos os gráficos",
         "alertas_titulo": "🔔 Alertas de Preço", "criar_alerta": "Criar Alerta",
         "ticker_alerta": "Ativo", "preco_alerta": "Preço Alvo",
         "acima_abaixo": "Quando o preço estiver", "acima": "acima", "abaixo": "abaixo",
@@ -132,7 +133,8 @@ idiomas = {
         "quantidade_sugerida": "Cantidad sugerida:",
         "atualizar": "⟲ Actualizar", "historico": "HISTÓRICO", "subtitulo": "Análisis Estratégico",
         "ultima_at": "Última actualización:", "grafico_h": "Gráficos Técnicos",
-        "btn_expandir": "📈 Expandir", "btn_recolher": "📐 Contraer", "help_graficos": "Expandir/Contraer",
+        "btn_expandir": "📈 Expandir Todos", "btn_recolher": "📐 Contraer Todos",
+        "help_graficos": "Expandir/Contraer todos los gráficos",
         "alertas_titulo": "🔔 Alertas de Precio", "criar_alerta": "Crear Alerta",
         "ticker_alerta": "Activo", "preco_alerta": "Precio Objetivo",
         "acima_abaixo": "Cuando el precio esté", "acima": "encima", "abaixo": "debajo",
@@ -315,19 +317,25 @@ with st.sidebar:
             st.warning("Informe um ticker.")
 
 # ===================================================================
-# 9. HEADER E STATUS
+# 9. HEADER E STATUS (com botão de expandir)
 # ===================================================================
 st.markdown(f"<h1 style='font-size:2.5rem;'>▣ EQUITY PRO</h1><p>{t['subtitulo']}</p>", unsafe_allow_html=True)
 
 status_label, status_color, status_text = check_market_status()
 st.markdown(f"<div style='background-color: {status_color}; padding: 8px; border-radius: 4px; text-align: center; color: white; font-weight: bold; margin-bottom: 20px;'>{status_text}</div>", unsafe_allow_html=True)
 
-col_refresh, col_export = st.columns([4,1])
+# Três colunas: Refresh, Expandir/Recolher, Exportar
+col_refresh, col_expand, col_export = st.columns([2, 1, 1])
 with col_refresh:
     if st.button(t["atualizar"], use_container_width=True):
         st.rerun()
+with col_expand:
+    label_btn = t["btn_expandir"] if not st.session_state.show_all_charts else t["btn_recolher"]
+    if st.button(label_btn, use_container_width=True, help=t["help_graficos"]):
+        st.session_state.show_all_charts = not st.session_state.show_all_charts
+        st.rerun()
 with col_export:
-    if st.button(f"📥 {t['exportar']}"):
+    if st.button(f"📥 {t['exportar']}", use_container_width=True):
         if ativos_f:
             ticker_exp = ativos_f[0]['ticker']
             yf_ticker = ticker_exp.replace("BINANCE:", "").replace("USDT", "-USD")
@@ -375,7 +383,7 @@ filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="seto
 ativos_f = st.session_state.meus_ativos if filtro_setor == t["todos"] else [a for a in st.session_state.meus_ativos if a['setor'] == filtro_setor]
 
 # ===================================================================
-# 12. CARDS DE ATIVOS COM GRÁFICOS INTERATIVOS (seletor horizontal)
+# 12. CARDS DE ATIVOS COM GRÁFICOS INTERATIVOS
 # ===================================================================
 cols = st.columns(3)
 for i, ativo in enumerate(ativos_f):
@@ -418,7 +426,7 @@ for i, ativo in enumerate(ativos_f):
             st.caption(f"{t['info_detalhe']} {simb_m} {st.session_state.invest_save:,.2f} → {t['quantidade_sugerida']} **{qtd_sugerida:.4f}**")
             st.caption(f"Code: `{ticker}`")
 
-            # GRÁFICOS COM SELETOR (interativo, compacto)
+            # GRÁFICOS COM SELETOR
             with st.expander(f"📈 {t['grafico_h']}", expanded=st.session_state.show_all_charts):
                 try:
                     yf_ticker = ticker.replace("BINANCE:", "").replace("USDT", "-USD")
