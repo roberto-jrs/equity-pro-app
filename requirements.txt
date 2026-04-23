@@ -6,3 +6,4 @@ pytz
 yfinance
 plotly
 streamlit-autorefresh
+pandas_ta
