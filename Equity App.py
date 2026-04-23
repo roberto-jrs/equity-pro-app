@@ -420,11 +420,16 @@ for i, ativo in enumerate(ativos_f):
             st.caption(f"Code: `{ticker}`")
 
             # EXPANDER COM GRÁFICOS AVANÇADOS
-            with st.expander(f"📈 {t['grafico_h']}", expanded=st.session_state.show_all_charts):
+                        with st.expander(f"📈 {t['grafico_h']}", expanded=st.session_state.show_all_charts):
                 try:
                     yf_ticker = ticker.replace("BINANCE:", "").replace("USDT", "-USD")
                     hist = yf.download(yf_ticker, period="1mo", interval="1d", progress=False)
                     if not hist.empty and len(hist) > 20:
+                        # Se o DataFrame tiver MultiIndex nas colunas, simplificar
+                        if isinstance(hist.columns, pd.MultiIndex):
+                            hist.columns = hist.columns.get_level_values(0)
+                        
+                        # Calcular indicadores
                         hist['SMA20'] = sma(hist['Close'], 20)
                         hist['SMA50'] = sma(hist['Close'], 50)
                         hist['RSI'] = rsi(hist['Close'], 14)
@@ -441,9 +446,17 @@ for i, ativo in enumerate(ativos_f):
                         fig.update_layout(title=f"{ticker} - Candle + Médias", height=400, xaxis_rangeslider_visible=False)
                         st.plotly_chart(fig, use_container_width=True)
 
-                        # Volume
-                        fig_vol = px.bar(hist, x=hist.index, y='Volume', title="Volume", color_discrete_sequence=['lightblue'])
-                        st.plotly_chart(fig_vol, use_container_width=True)
+                        # Volume - encontrar a coluna correta (pode ser 'Volume' ou com nome diferente)
+                        coluna_volume = None
+                        for col in hist.columns:
+                            if 'volume' in col.lower():
+                                coluna_volume = col
+                                break
+                        if coluna_volume:
+                            fig_vol = px.bar(hist, x=hist.index, y=coluna_volume, title="Volume", color_discrete_sequence=['lightblue'])
+                            st.plotly_chart(fig_vol, use_container_width=True)
+                        else:
+                            st.info("Dados de volume não disponíveis para este ativo")
 
                         # RSI
                         fig_rsi = px.line(hist, x=hist.index, y='RSI', title="RSI (14)")
