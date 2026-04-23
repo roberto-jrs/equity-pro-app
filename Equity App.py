@@ -3,13 +3,13 @@ import pandas as pd
 import yfinance as yf
 import plotly.express as px
 import plotly.graph_objects as go
-import pandas_ta as ta
 from finnhub import Client
 from datetime import datetime, time as dt_time, timedelta
 import pytz
 from streamlit_autorefresh import st_autorefresh
 import os
 import io
+import numpy as np
 
 # ===================================================================
 # 1. CONFIGURAÇÃO DE PÁGINA
@@ -29,7 +29,33 @@ except Exception:
 finnhub_client = Client(api_key=FINNHUB_KEY)
 
 # ===================================================================
-# 3. ESTADO DA SESSÃO (inicialização estendida)
+# 3. FUNÇÕES DE INDICADORES TÉCNICOS (MANUAIS)
+# ===================================================================
+def sma(series, length):
+    """Simple Moving Average"""
+    return series.rolling(window=length).mean()
+
+def rsi(series, length=14):
+    """Relative Strength Index"""
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(window=length).mean()
+    avg_loss = loss.rolling(window=length).mean()
+    rs = avg_gain / avg_loss
+    return 100 - (100 / (1 + rs))
+
+def macd(series, fast=12, slow=26, signal=9):
+    """MACD line, signal line, histogram"""
+    ema_fast = series.ewm(span=fast, adjust=False).mean()
+    ema_slow = series.ewm(span=slow, adjust=False).mean()
+    macd_line = ema_fast - ema_slow
+    signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+    histogram = macd_line - signal_line
+    return macd_line, signal_line, histogram
+
+# ===================================================================
+# 4. ESTADO DA SESSÃO (inicialização completa)
 # ===================================================================
 if 'sel_idioma' not in st.session_state:
     st.session_state.sel_idioma = "English"
@@ -38,7 +64,7 @@ if 'setor_selector' not in st.session_state:
 if 'moeda_save' not in st.session_state:
     st.session_state.moeda_save = "USD ($)"
 if 'invest_save' not in st.session_state:
-    st.session_state.invest_save = 10000.00   # saldo inicial
+    st.session_state.invest_save = 10000.00
 if 'sel_fuso' not in st.session_state:
     st.session_state.sel_fuso = 'America/New_York'
 if 'show_all_charts' not in st.session_state:
@@ -50,7 +76,7 @@ if 'carteira' not in st.session_state:
 if 'saldo' not in st.session_state:
     st.session_state.saldo = st.session_state.invest_save
 if 'alertas' not in st.session_state:
-    st.session_state.alertas = []  # lista de dict: {"ticker": "AAPL", "preco": 150, "direcao": "acima"}
+    st.session_state.alertas = []
 if 'meus_ativos' not in st.session_state:
     st.session_state.meus_ativos = [
         {"ticker": "AAPL", "nome": "Apple Inc.", "setor": "Tecnologia", "moeda_base": "USD"},
@@ -70,7 +96,7 @@ if 'meus_ativos' not in st.session_state:
     ]
 
 # ===================================================================
-# 4. DICIONÁRIO DE TRADUÇÃO (mesmo anterior, apenas copie e cole)
+# 5. DICIONÁRIO DE TRADUÇÃO (completo)
 # ===================================================================
 idiomas = {
     "English": {
@@ -81,7 +107,7 @@ idiomas = {
         "monitor": "Monitoring assets in sector:", "info_cambio": "Exchange rate:",
         "info_detalhe": "Purchase calculations based on capital of", "compra": "Simulated quantity:",
         "atualizar": "⟲ Refresh", "historico": "HISTORICAL", "subtitulo": "Advanced Trading Terminal",
-        "ultima_at": "Last update:", "grafico_h": "Historical Chart", "btn_expandir": "📈 Expand",
+        "ultima_at": "Last update:", "grafico_h": "Technical Charts", "btn_expandir": "📈 Expand",
         "btn_recolher": "📐 Collapse", "help_graficos": "Expand/Collapse charts",
         "carteira_titulo": "💼 Portfolio", "extrato": "Transaction History", "comprar": "Buy",
         "vender": "Sell", "saldo": "Balance", "alertas_titulo": "🔔 Price Alerts",
@@ -97,9 +123,9 @@ idiomas = {
         "alocacao": "📊 Alocação", "terminal": "💡 Terminal", "monitor": "Monitorando setor:",
         "info_cambio": "Câmbio:", "info_detalhe": "Cálculos com capital de", "compra": "Quantidade simulada:",
         "atualizar": "⟲ Atualizar", "historico": "HISTÓRICO", "subtitulo": "Terminal Avançado",
-        "ultima_at": "Última atualização:", "grafico_h": "Gráfico Histórico",
+        "ultima_at": "Última atualização:", "grafico_h": "Gráficos Técnicos",
         "btn_expandir": "📈 Expandir", "btn_recolher": "📐 Recolher", "help_graficos": "Expandir/Recolher",
-        "carteira_titulo": "💼 Carteira", "extrato": "Histórico de Transações", "comprar": "Comprar",
+        "carteira_titulo": "💼 Carteira", "extrato": "Histórico", "comprar": "Comprar",
         "vender": "Vender", "saldo": "Saldo", "alertas_titulo": "🔔 Alertas de Preço",
         "criar_alerta": "Criar Alerta", "ticker_alerta": "Ativo", "preco_alerta": "Preço Alvo",
         "acima_abaixo": "Quando o preço estiver", "acima": "acima", "abaixo": "abaixo",
@@ -107,14 +133,13 @@ idiomas = {
         "executar_back": "Executar", "exportar": "Exportar Dados", "modo_noturno": "Modo Noturno"
     },
     "Español": {
-        # similar, por brevidade mantenho igual à versão anterior, mas você pode copiar do seu código original
         "titulo_idioma": "IDIOMA", "config": "CONFIGURACIÓN", "moeda": "Moneda:",
         "capital": "Capital Inicial:", "filtro": "Filtrar por Sector:", "fuso": "Zona Horaria:",
         "todos": "Todos", "status_on": "MERCADO ABIERTO", "status_off": "MERCADO CERRADO",
         "alocacao": "📊 Asignación", "terminal": "💡 Terminal", "monitor": "Monitoreando sector:",
         "info_cambio": "Tipo de cambio:", "info_detalhe": "Cálculos con capital de", "compra": "Cantidad simulada:",
         "atualizar": "⟲ Actualizar", "historico": "HISTÓRICO", "subtitulo": "Terminal Avanzado",
-        "ultima_at": "Última actualización:", "grafico_h": "Gráfico Histórico",
+        "ultima_at": "Última actualización:", "grafico_h": "Gráficos Técnicos",
         "btn_expandir": "📈 Expandir", "btn_recolher": "📐 Contraer", "help_graficos": "Expandir/Contraer",
         "carteira_titulo": "💼 Cartera", "extrato": "Historial", "comprar": "Comprar",
         "vender": "Vender", "saldo": "Saldo", "alertas_titulo": "🔔 Alertas de Precio",
@@ -129,7 +154,7 @@ def mudar_idioma():
     st.session_state.sel_idioma = st.session_state.idioma_temp
 
 # ===================================================================
-# 5. FUNÇÕES AUXILIARES
+# 6. FUNÇÕES AUXILIARES DE DADOS
 # ===================================================================
 @st.cache_data(ttl=3600)
 def get_rates():
@@ -202,26 +227,25 @@ def converter_preco(preco_original, moeda_base, moeda_destino, taxa_brl, taxa_eu
     return preco_original, "$"
 
 def executar_backtest(ticker, data_inicio, data_fim, short_ma=20, long_ma=50):
-    """Backtest de cruzamento de médias móveis"""
+    """Backtest de cruzamento de médias móveis sem pandas_ta"""
     df = yf.download(ticker, start=data_inicio, end=data_fim, progress=False)
     if df.empty:
         return None, None, None
-    df['MA_short'] = ta.sma(df['Close'], length=short_ma)
-    df['MA_long'] = ta.sma(df['Close'], length=long_ma)
+    df['MA_short'] = sma(df['Close'], short_ma)
+    df['MA_long'] = sma(df['Close'], long_ma)
     df['Signal'] = 0
     df.loc[df['MA_short'] > df['MA_long'], 'Signal'] = 1
     df.loc[df['MA_short'] <= df['MA_long'], 'Signal'] = -1
     df['Position'] = df['Signal'].diff()
-    # Simular retornos
     df['Returns'] = df['Close'].pct_change()
     df['Strategy_Returns'] = df['Signal'].shift(1) * df['Returns']
     df['Cumulative_Returns'] = (1 + df['Returns']).cumprod()
     df['Cumulative_Strategy'] = (1 + df['Strategy_Returns']).cumprod()
-    total_return = df['Cumulative_Strategy'].iloc[-1] - 1
+    total_return = df['Cumulative_Strategy'].iloc[-1] - 1 if not df.empty else 0
     return df, total_return
 
 # ===================================================================
-# 6. CSS PERSONALIZADO + MODO NOTURNO MANUAL
+# 7. CSS PERSONALIZADO + MODO NOTURNO MANUAL
 # ===================================================================
 if st.session_state.modo_noturno:
     st.markdown("""
@@ -229,6 +253,7 @@ if st.session_state.modo_noturno:
             .stApp { background-color: #0E1117; color: #FAFAFA; }
             .css-1d391kg { background-color: #1E1E1E; }
             .st-bw { color: #FAFAFA; }
+            div[data-testid="stExpander"] { background-color: #1E1E1E; }
         </style>
     """, unsafe_allow_html=True)
 else:
@@ -239,7 +264,7 @@ else:
     """, unsafe_allow_html=True)
 
 # ===================================================================
-# 7. SIDEBAR (com todas as novas opções)
+# 8. SIDEBAR (todas as configurações)
 # ===================================================================
 with st.sidebar:
     st.header(idiomas[st.session_state.sel_idioma]["titulo_idioma"])
@@ -252,18 +277,13 @@ with st.sidebar:
     st.header(t["config"])
     fusos_lista = ['America/New_York', 'America/Sao_Paulo', 'Europe/London', 'Europe/Paris', 'Asia/Tokyo', 'UTC']
     st.selectbox(t["fuso"], fusos_lista, key='sel_fuso')
-    moeda_antiga = st.session_state.moeda_save
     st.selectbox(t["moeda"], ["USD ($)", "BRL (R$)", "EUR (€)"], key="moeda_save")
-    if moeda_antiga != st.session_state.moeda_save:
-        st.rerun()
 
-    # Novo campo para capital inicial
     novo_capital = st.number_input(t["capital"], min_value=0.0, step=1000.0, value=st.session_state.invest_save)
     if novo_capital != st.session_state.invest_save:
         st.session_state.invest_save = novo_capital
         st.session_state.saldo = novo_capital
 
-    # Modo noturno manual
     st.toggle(t["modo_noturno"], key="modo_noturno")
 
     st.divider()
@@ -311,7 +331,7 @@ with st.sidebar:
             st.warning("Informe um ticker.")
 
 # ===================================================================
-# 8. HEADER E STATUS
+# 9. HEADER E STATUS
 # ===================================================================
 st.markdown(f"<h1 style='font-size:2.5rem;'>▣ EQUITY PRO</h1><p>{t['subtitulo']}</p>", unsafe_allow_html=True)
 
@@ -324,7 +344,6 @@ with col_refresh:
         st.rerun()
 with col_export:
     if st.button(f"📥 {t['exportar']}"):
-        # Exportar dados da carteira
         if not st.session_state.carteira.empty:
             csv = st.session_state.carteira.to_csv(index=False).encode('utf-8')
             st.download_button("Download CSV", csv, "carteira.csv", "text/csv", key="export_csv_btn")
@@ -334,12 +353,18 @@ with col_export:
 st.caption(f"{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}")
 
 # ===================================================================
-# 9. CARTEIRA E SALDO
+# 10. CARTEIRA E SALDO
 # ===================================================================
 col1, col2 = st.columns([1,2])
 with col1:
     st.subheader(t["carteira_titulo"])
-    st.metric(t["saldo"], f"$ {st.session_state.saldo:,.2f}" if st.session_state.moeda_save=="USD ($)" else f"R$ {st.session_state.saldo:,.2f}" if st.session_state.moeda_save=="BRL (R$)" else f"€ {st.session_state.saldo:,.2f}")
+    saldo_exibido = st.session_state.saldo
+    if st.session_state.moeda_save == "USD ($)":
+        st.metric(t["saldo"], f"$ {saldo_exibido:,.2f}")
+    elif st.session_state.moeda_save == "BRL (R$)":
+        st.metric(t["saldo"], f"R$ {saldo_exibido:,.2f}")
+    else:
+        st.metric(t["saldo"], f"€ {saldo_exibido:,.2f}")
     if not st.session_state.carteira.empty:
         st.dataframe(st.session_state.carteira, use_container_width=True)
     else:
@@ -350,14 +375,14 @@ with col2:
     brl_rate, eur_rate = get_rates()
 
 # ===================================================================
-# 10. FILTRO DE SETOR
+# 11. FILTRO DE SETOR
 # ===================================================================
 setores_lista = sorted(list(set([a['setor'] for a in st.session_state.meus_ativos])))
 filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
 ativos_f = st.session_state.meus_ativos if filtro_setor == t["todos"] else [a for a in st.session_state.meus_ativos if a['setor'] == filtro_setor]
 
 # ===================================================================
-# 11. CARDS DE ATIVOS COM COMPRA/VENDA
+# 12. CARDS DE ATIVOS COM GRÁFICOS AVANÇADOS + COMPRA/VENDA
 # ===================================================================
 cols = st.columns(3)
 for i, ativo in enumerate(ativos_f):
@@ -389,7 +414,7 @@ for i, ativo in enumerate(ativos_f):
             # Compra/Venda
             col_comprar, col_vender = st.columns(2)
             with col_comprar:
-                qtd_compra = st.number_input("Qtd", min_value=0.0, step=0.1, key=f"comprar_{ticker}", format="%.2f")
+                qtd_compra = st.number_input("Qtd", min_value=0.0, step=0.01, key=f"comprar_{ticker}", format="%.4f")
                 if st.button(t["comprar"], key=f"btn_c_{ticker}"):
                     custo = qtd_compra * price
                     if custo <= st.session_state.saldo:
@@ -405,10 +430,8 @@ for i, ativo in enumerate(ativos_f):
                     else:
                         st.error("Saldo insuficiente.")
             with col_vender:
-                qtd_venda = st.number_input("Qtd", min_value=0.0, step=0.1, key=f"vender_{ticker}", format="%.2f")
+                qtd_venda = st.number_input("Qtd", min_value=0.0, step=0.01, key=f"vender_{ticker}", format="%.4f")
                 if st.button(t["vender"], key=f"btn_v_{ticker}"):
-                    # Verifica se o usuário tem quantidade suficiente (simplificado: considera que vende tudo o que comprou anteriormente)
-                    # Para simplificar, apenas credita o valor e registra venda, sem verificar estoque exato.
                     st.session_state.saldo += qtd_venda * price
                     nova_trans = pd.DataFrame([{
                         "Data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -421,22 +444,22 @@ for i, ativo in enumerate(ativos_f):
 
             st.caption(f"Code: `{ticker}`")
 
-            # EXPANDER COM GRÁFICO AVANÇADO
+            # EXPANDER COM GRÁFICOS AVANÇADOS (candlestick, volume, RSI, MACD)
             with st.expander(f"📈 {t['grafico_h']}", expanded=st.session_state.show_all_charts):
                 try:
                     yf_ticker = ticker.replace("BINANCE:", "").replace("USDT", "-USD")
-                    periodo = "1mo"  # para ter dados suficientes para indicadores
-                    hist = yf.download(yf_ticker, period=periodo, interval="1d", progress=False)
-                    if not hist.empty:
-                        # Calcular indicadores técnicos
-                        hist['RSI'] = ta.rsi(hist['Close'], length=14)
-                        hist['SMA20'] = ta.sma(hist['Close'], length=20)
-                        hist['SMA50'] = ta.sma(hist['Close'], length=50)
-                        macd = ta.macd(hist['Close'])
-                        if macd is not None:
-                            hist = pd.concat([hist, macd], axis=1)
+                    # Para B3, manter .SA
+                    hist = yf.download(yf_ticker, period="1mo", interval="1d", progress=False)
+                    if not hist.empty and len(hist) > 20:
+                        # Calcular indicadores
+                        hist['SMA20'] = sma(hist['Close'], 20)
+                        hist['SMA50'] = sma(hist['Close'], 50)
+                        hist['RSI'] = rsi(hist['Close'], 14)
+                        macd_line, signal_line, hist['MACD_hist'] = macd(hist['Close'])
+                        hist['MACD'] = macd_line
+                        hist['MACD_signal'] = signal_line
 
-                        # Gráfico Candlestick + Volume
+                        # Candlestick + Médias
                         fig = go.Figure()
                         fig.add_trace(go.Candlestick(x=hist.index,
                                                      open=hist['Open'], high=hist['High'],
@@ -444,10 +467,12 @@ for i, ativo in enumerate(ativos_f):
                                                      name='Candlestick'))
                         fig.add_trace(go.Scatter(x=hist.index, y=hist['SMA20'], mode='lines', name='SMA20', line=dict(color='orange')))
                         fig.add_trace(go.Scatter(x=hist.index, y=hist['SMA50'], mode='lines', name='SMA50', line=dict(color='purple')))
-                        fig.update_layout(title=f"{ticker} - Candle + Médias", height=400, xaxis_rangeslider_visible=False, template='plotly_dark')
+                        fig.update_layout(title=f"{ticker} - Candle + Médias", height=400, xaxis_rangeslider_visible=False)
+                        fig.update_xaxes(title=None)
+                        fig.update_yaxes(title="Preço")
                         st.plotly_chart(fig, use_container_width=True)
 
-                        # Gráfico de Volume
+                        # Volume
                         fig_vol = px.bar(hist, x=hist.index, y='Volume', title="Volume", color_discrete_sequence=['lightblue'])
                         st.plotly_chart(fig_vol, use_container_width=True)
 
@@ -455,22 +480,23 @@ for i, ativo in enumerate(ativos_f):
                         fig_rsi = px.line(hist, x=hist.index, y='RSI', title="RSI (14)")
                         fig_rsi.add_hline(y=70, line_dash="dash", line_color="red")
                         fig_rsi.add_hline(y=30, line_dash="dash", line_color="green")
+                        fig_rsi.update_yaxes(range=[0,100])
                         st.plotly_chart(fig_rsi, use_container_width=True)
 
                         # MACD
-                        if 'MACD_12_26_9' in hist.columns:
-                            fig_macd = go.Figure()
-                            fig_macd.add_trace(go.Scatter(x=hist.index, y=hist['MACD_12_26_9'], name='MACD'))
-                            fig_macd.add_trace(go.Scatter(x=hist.index, y=hist['MACDs_12_26_9'], name='Signal'))
-                            fig_macd.add_bar(x=hist.index, y=hist['MACDh_12_26_9'], name='Histogram')
-                            st.plotly_chart(fig_macd, use_container_width=True)
+                        fig_macd = go.Figure()
+                        fig_macd.add_trace(go.Scatter(x=hist.index, y=hist['MACD'], name='MACD'))
+                        fig_macd.add_trace(go.Scatter(x=hist.index, y=hist['MACD_signal'], name='Signal'))
+                        fig_macd.add_bar(x=hist.index, y=hist['MACD_hist'], name='Histogram')
+                        fig_macd.update_layout(title="MACD")
+                        st.plotly_chart(fig_macd, use_container_width=True)
                     else:
                         st.warning("Dados históricos insuficientes para gráficos avançados.")
                 except Exception as e:
-                    st.error(f"Erro no gráfico: {e}")
+                    st.error(f"Erro no gráfico: {str(e)}")
 
 # ===================================================================
-# 12. BACKTEST RESULTADOS (se existir)
+# 13. BACKTEST RESULTADOS (se existir)
 # ===================================================================
 if 'backtest_result' in st.session_state:
     df_bt, ret, ticker_bt = st.session_state.backtest_result
@@ -485,7 +511,7 @@ if 'backtest_result' in st.session_state:
     st.plotly_chart(fig_bt, use_container_width=True)
 
 # ===================================================================
-# 13. VERIFICAÇÃO DE ALERTAS (executada a cada refresh)
+# 14. VERIFICAÇÃO DE ALERTAS (a cada refresh)
 # ===================================================================
 if st.session_state.alertas:
     for alerta in st.session_state.alertas:
@@ -493,13 +519,11 @@ if st.session_state.alertas:
         if preco_atual > 0:
             if alerta["direcao"] == "above" and preco_atual >= alerta["preco"]:
                 st.toast(f"🔔 ALERTA: {alerta['ticker']} atingiu ${preco_atual:.2f} (acima de ${alerta['preco']})", icon="⚠️")
-                # remove alerta após disparo? opcional
-                # st.session_state.alertas.remove(alerta)
             elif alerta["direcao"] == "below" and preco_atual <= alerta["preco"]:
                 st.toast(f"🔔 ALERTA: {alerta['ticker']} caiu para ${preco_atual:.2f} (abaixo de ${alerta['preco']})", icon="⚠️")
 
 # ===================================================================
-# 14. REFRESH AUTOMÁTICO
+# 15. REFRESH AUTOMÁTICO CONDICIONAL
 # ===================================================================
 status_label, _, _ = check_market_status()
 if status_label == "ON":
