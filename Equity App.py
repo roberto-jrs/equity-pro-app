@@ -51,7 +51,7 @@ def macd(series, fast=12, slow=26, signal=9):
     return macd_line, signal_line, histogram
 
 # ===================================================================
-# 4. ESTADO DA SESSÃO (inicialização sem carteira)
+# 4. ESTADO DA SESSÃO
 # ===================================================================
 if 'sel_idioma' not in st.session_state:
     st.session_state.sel_idioma = "English"
@@ -60,7 +60,7 @@ if 'setor_selector' not in st.session_state:
 if 'moeda_save' not in st.session_state:
     st.session_state.moeda_save = "USD ($)"
 if 'invest_save' not in st.session_state:
-    st.session_state.invest_save = 10000.00   # apenas para simulação de quantidade
+    st.session_state.invest_save = 10000.00
 if 'sel_fuso' not in st.session_state:
     st.session_state.sel_fuso = 'America/New_York'
 if 'show_all_charts' not in st.session_state:
@@ -88,7 +88,7 @@ if 'meus_ativos' not in st.session_state:
     ]
 
 # ===================================================================
-# 5. DICIONÁRIO DE TRADUÇÃO (versão sem compra/venda)
+# 5. TRADUÇÃO (compactada)
 # ===================================================================
 idiomas = {
     "English": {
@@ -253,7 +253,7 @@ else:
     """, unsafe_allow_html=True)
 
 # ===================================================================
-# 8. SIDEBAR (configurações e ferramentas)
+# 8. SIDEBAR
 # ===================================================================
 with st.sidebar:
     st.header(idiomas[st.session_state.sel_idioma]["titulo_idioma"])
@@ -328,13 +328,13 @@ with col_refresh:
         st.rerun()
 with col_export:
     if st.button(f"📥 {t['exportar']}"):
-        # Exportar dados do ativo selecionado? Pode ser genérico ou permitir escolha.
-        # Vamos exportar os dados do primeiro ativo filtrado como exemplo.
         if ativos_f:
             ticker_exp = ativos_f[0]['ticker']
             yf_ticker = ticker_exp.replace("BINANCE:", "").replace("USDT", "-USD")
             hist_exp = yf.download(yf_ticker, period="1mo", progress=False)
             if not hist_exp.empty:
+                if isinstance(hist_exp.columns, pd.MultiIndex):
+                    hist_exp.columns = hist_exp.columns.get_level_values(0)
                 csv = hist_exp.to_csv().encode('utf-8')
                 st.download_button("Download CSV do gráfico", csv, f"{ticker_exp}_data.csv", "text/csv", key="export_csv_btn")
             else:
@@ -375,7 +375,7 @@ filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="seto
 ativos_f = st.session_state.meus_ativos if filtro_setor == t["todos"] else [a for a in st.session_state.meus_ativos if a['setor'] == filtro_setor]
 
 # ===================================================================
-# 12. CARDS DE ATIVOS (sem compra/venda, com quantidade sugerida)
+# 12. CARDS DE ATIVOS (gráficos corrigidos)
 # ===================================================================
 cols = st.columns(3)
 for i, ativo in enumerate(ativos_f):
@@ -404,7 +404,7 @@ for i, ativo in enumerate(ativos_f):
             seta = '▲' if change >= 0 else '▼'
             st.markdown(f"<p style='color:{cor_var}; font-weight:bold;'>{seta} {abs(change):.2f}%</p>", unsafe_allow_html=True)
 
-            # Quantidade sugerida (apenas referência)
+            # Quantidade sugerida
             invest_usd = st.session_state.invest_save
             if st.session_state.moeda_save == "BRL (R$)":
                 invest_usd = invest_usd / brl_rate
@@ -416,16 +416,15 @@ for i, ativo in enumerate(ativos_f):
             else:
                 qtd_sugerida = invest_usd / price if price > 0 else 0
             st.caption(f"{t['info_detalhe']} {simb_m} {st.session_state.invest_save:,.2f} → {t['quantidade_sugerida']} **{qtd_sugerida:.4f}**")
-
             st.caption(f"Code: `{ticker}`")
 
-            # EXPANDER COM GRÁFICOS AVANÇADOS
-                        with st.expander(f"📈 {t['grafico_h']}", expanded=st.session_state.show_all_charts):
+            # GRÁFICOS (bloco corrigido)
+            with st.expander(f"📈 {t['grafico_h']}", expanded=st.session_state.show_all_charts):
                 try:
                     yf_ticker = ticker.replace("BINANCE:", "").replace("USDT", "-USD")
                     hist = yf.download(yf_ticker, period="1mo", interval="1d", progress=False)
                     if not hist.empty and len(hist) > 20:
-                        # Se o DataFrame tiver MultiIndex nas colunas, simplificar
+                        # Simplificar colunas se MultiIndex
                         if isinstance(hist.columns, pd.MultiIndex):
                             hist.columns = hist.columns.get_level_values(0)
                         
@@ -446,17 +445,17 @@ for i, ativo in enumerate(ativos_f):
                         fig.update_layout(title=f"{ticker} - Candle + Médias", height=400, xaxis_rangeslider_visible=False)
                         st.plotly_chart(fig, use_container_width=True)
 
-                        # Volume - encontrar a coluna correta (pode ser 'Volume' ou com nome diferente)
-                        coluna_volume = None
+                        # Volume - detecta coluna
+                        col_volume = None
                         for col in hist.columns:
                             if 'volume' in col.lower():
-                                coluna_volume = col
+                                col_volume = col
                                 break
-                        if coluna_volume:
-                            fig_vol = px.bar(hist, x=hist.index, y=coluna_volume, title="Volume", color_discrete_sequence=['lightblue'])
+                        if col_volume:
+                            fig_vol = px.bar(hist, x=hist.index, y=col_volume, title="Volume", color_discrete_sequence=['lightblue'])
                             st.plotly_chart(fig_vol, use_container_width=True)
                         else:
-                            st.info("Dados de volume não disponíveis para este ativo")
+                            st.info("Dados de volume não disponíveis")
 
                         # RSI
                         fig_rsi = px.line(hist, x=hist.index, y='RSI', title="RSI (14)")
