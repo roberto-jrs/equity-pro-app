@@ -375,7 +375,7 @@ filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="seto
 ativos_f = st.session_state.meus_ativos if filtro_setor == t["todos"] else [a for a in st.session_state.meus_ativos if a['setor'] == filtro_setor]
 
 # ===================================================================
-# 12. CARDS DE ATIVOS (gráficos corrigidos)
+# 12. CARDS DE ATIVOS COM GRÁFICOS INTERATIVOS (seletor horizontal)
 # ===================================================================
 cols = st.columns(3)
 for i, ativo in enumerate(ativos_f):
@@ -418,7 +418,7 @@ for i, ativo in enumerate(ativos_f):
             st.caption(f"{t['info_detalhe']} {simb_m} {st.session_state.invest_save:,.2f} → {t['quantidade_sugerida']} **{qtd_sugerida:.4f}**")
             st.caption(f"Code: `{ticker}`")
 
-            # GRÁFICOS (bloco corrigido)
+            # GRÁFICOS COM SELETOR (interativo, compacto)
             with st.expander(f"📈 {t['grafico_h']}", expanded=st.session_state.show_all_charts):
                 try:
                     yf_ticker = ticker.replace("BINANCE:", "").replace("USDT", "-USD")
@@ -435,42 +435,55 @@ for i, ativo in enumerate(ativos_f):
                         macd_line, signal_line, hist['MACD_hist'] = macd(hist['Close'])
                         hist['MACD'] = macd_line
                         hist['MACD_signal'] = signal_line
-
-                        # Candlestick + Médias
-                        fig = go.Figure()
-                        fig.add_trace(go.Candlestick(x=hist.index, open=hist['Open'], high=hist['High'],
-                                                     low=hist['Low'], close=hist['Close'], name='Candlestick'))
-                        fig.add_trace(go.Scatter(x=hist.index, y=hist['SMA20'], mode='lines', name='SMA20', line=dict(color='orange')))
-                        fig.add_trace(go.Scatter(x=hist.index, y=hist['SMA50'], mode='lines', name='SMA50', line=dict(color='purple')))
-                        fig.update_layout(title=f"{ticker} - Candle + Médias", height=400, xaxis_rangeslider_visible=False)
-                        st.plotly_chart(fig, use_container_width=True)
-
-                        # Volume - detecta coluna
+                        
+                        # Detectar coluna de volume
                         col_volume = None
                         for col in hist.columns:
                             if 'volume' in col.lower():
                                 col_volume = col
                                 break
-                        if col_volume:
-                            fig_vol = px.bar(hist, x=hist.index, y=col_volume, title="Volume", color_discrete_sequence=['lightblue'])
-                            st.plotly_chart(fig_vol, use_container_width=True)
-                        else:
-                            st.info("Dados de volume não disponíveis")
-
-                        # RSI
-                        fig_rsi = px.line(hist, x=hist.index, y='RSI', title="RSI (14)")
-                        fig_rsi.add_hline(y=70, line_dash="dash", line_color="red")
-                        fig_rsi.add_hline(y=30, line_dash="dash", line_color="green")
-                        fig_rsi.update_yaxes(range=[0,100])
-                        st.plotly_chart(fig_rsi, use_container_width=True)
-
-                        # MACD
-                        fig_macd = go.Figure()
-                        fig_macd.add_trace(go.Scatter(x=hist.index, y=hist['MACD'], name='MACD'))
-                        fig_macd.add_trace(go.Scatter(x=hist.index, y=hist['MACD_signal'], name='Signal'))
-                        fig_macd.add_bar(x=hist.index, y=hist['MACD_hist'], name='Histogram')
-                        fig_macd.update_layout(title="MACD")
-                        st.plotly_chart(fig_macd, use_container_width=True)
+                        
+                        # Seletor de tipo de gráfico (horizontal)
+                        tipo_grafico = st.radio(
+                            "Tipo de gráfico:",
+                            ["Candlestick", "Volume", "RSI", "MACD"],
+                            horizontal=True,
+                            key=f"graf_sel_{ticker}_{i}"
+                        )
+                        
+                        if tipo_grafico == "Candlestick":
+                            fig = go.Figure()
+                            fig.add_trace(go.Candlestick(x=hist.index, open=hist['Open'], high=hist['High'],
+                                                         low=hist['Low'], close=hist['Close'], name='Candlestick'))
+                            fig.add_trace(go.Scatter(x=hist.index, y=hist['SMA20'], mode='lines', name='SMA20', line=dict(color='orange')))
+                            fig.add_trace(go.Scatter(x=hist.index, y=hist['SMA50'], mode='lines', name='SMA50', line=dict(color='purple')))
+                            fig.update_layout(title=f"{ticker} - Candle + Médias", height=400, xaxis_rangeslider_visible=False)
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                        elif tipo_grafico == "Volume":
+                            if col_volume:
+                                fig = px.bar(hist, x=hist.index, y=col_volume, title="Volume", color_discrete_sequence=['lightblue'])
+                                fig.update_layout(height=400)
+                                st.plotly_chart(fig, use_container_width=True)
+                            else:
+                                st.info("Dados de volume não disponíveis")
+                                
+                        elif tipo_grafico == "RSI":
+                            fig = px.line(hist, x=hist.index, y='RSI', title="RSI (14)")
+                            fig.add_hline(y=70, line_dash="dash", line_color="red")
+                            fig.add_hline(y=30, line_dash="dash", line_color="green")
+                            fig.update_yaxes(range=[0,100])
+                            fig.update_layout(height=400)
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                        elif tipo_grafico == "MACD":
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(x=hist.index, y=hist['MACD'], name='MACD'))
+                            fig.add_trace(go.Scatter(x=hist.index, y=hist['MACD_signal'], name='Signal'))
+                            fig.add_bar(x=hist.index, y=hist['MACD_hist'], name='Histogram')
+                            fig.update_layout(title="MACD", height=400)
+                            st.plotly_chart(fig, use_container_width=True)
+                            
                     else:
                         st.warning("Dados históricos insuficientes para gráficos avançados.")
                 except Exception as e:
