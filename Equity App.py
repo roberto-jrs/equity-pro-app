@@ -422,7 +422,64 @@ if st.session_state.modo_noturno:
 else:
     st.markdown("""
         <style>
-            .stApp { background-color: #FFFFFF; }
+            /* Fundo principal */
+            .stApp {
+                background-color: #F5F5F5;
+            }
+            /* Cor do texto principal */
+            .stApp, .st-bw, .css-1d391kg, .st-ae, .st-af, .st-ag {
+                color: #1E1E1E;
+            }
+            /* Cabeçalhos */
+            h1, h2, h3, h4, h5, h6, .st-emotion-cache-1v0mbdj {
+                color: #1E1E1E;
+            }
+            /* Sidebar */
+            .css-1d391kg, [data-testid="stSidebar"] {
+                background-color: #FFFFFF;
+                color: #1E1E1E;
+            }
+            /* Cards e containers */
+            .stContainer, div[data-testid="stVerticalBlock"] {
+                background-color: #FFFFFF;
+                border: 1px solid #E0E0E0;
+            }
+            /* Expander */
+            div[data-testid="stExpander"] {
+                background-color: #FFFFFF;
+                border: 1px solid #E0E0E0;
+                color: #1E1E1E;
+            }
+            /* Texto dentro de expander */
+            div[data-testid="stExpander"] p, div[data-testid="stExpander"] span {
+                color: #1E1E1E;
+            }
+            /* Fundo dos selects e inputs */
+            .stTextInput > div > div > input, .stSelectbox > div > div > select {
+                background-color: #FFFFFF;
+                color: #1E1E1E;
+            }
+            /* Botões */
+            .stButton > button {
+                background-color: #007bff;
+                color: white;
+                border: none;
+            }
+            .stButton > button:hover {
+                background-color: #0056b3;
+            }
+            /* Métricas */
+            .stMetric label, .stMetric value {
+                color: #1E1E1E;
+            }
+            /* Alertas (info, warning, error) */
+            .stAlert {
+                background-color: #F5F5F5;
+                color: #1E1E1E;
+            }
+            .stAlert p {
+                color: #1E1E1E;
+            }
         </style>
     """, unsafe_allow_html=True)
 
