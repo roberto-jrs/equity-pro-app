@@ -83,7 +83,7 @@ if not st.session_state["autenticado"]:
     st.stop()
 
 usuario_logado = st.session_state["usuario"]
-st.sidebar.success(f"👤 {usuario_logado['nome']}")
+st.sidebar.success(f"👤 @{usuario_logado['username']}")
 if st.sidebar.button("Sair", key="sair"):
     del st.session_state["autenticado"]
     del st.session_state["usuario"]
