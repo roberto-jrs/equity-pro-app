@@ -473,7 +473,7 @@ with st.sidebar:
 
     st.divider()
     st.header(t["config"])
-    fusos_lista = ['America/New_York', 'America/São_Paulo', 'Europe/London', 'Europe/Paris', 'Asia/Tokyo', 'UTC']
+    fusos_lista = ['America/New_York', 'America/Brasilia', 'Europe/London', 'Europe/Paris', 'Asia/Tokyo', 'UTC']
     st.selectbox(t["fuso"], fusos_lista, key='sel_fuso')
     st.selectbox(t["moeda"], ["USD ($)", "BRL (R$)", "EUR (€)"], key="moeda_save")
     st.number_input(t["capital"], min_value=0.0, step=1000.0, value=st.session_state.invest_save, key="invest_save")
