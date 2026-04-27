@@ -66,7 +66,7 @@ if not st.session_state["autenticado"]:
                 st.rerun()
 
 def login_ui():
-    st.title("📊 Equity Pro")
+    st.title("₯ Equity Pro")
     
     if "aba_atual" not in st.session_state:
         st.session_state["aba_atual"] = "Login"
