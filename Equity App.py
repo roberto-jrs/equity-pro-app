@@ -297,11 +297,11 @@ def send_email_alert(subject, body, config):
     if not config['enabled']:
         return
     try:
-        msg = MimeMultipart()
+        msg = MIMEMultipart()
         msg['From'] = config['email_from']
         msg['To'] = config['email_to']
         msg['Subject'] = subject
-        msg.attach(MimeText(body, 'plain'))
+        msg.attach(MIMEText(body, 'plain'))
         server = smtplib.SMTP(config['smtp_server'], config['smtp_port'])
         server.starttls()
         server.login(config['email_from'], config['email_password'])
