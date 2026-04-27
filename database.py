@@ -79,3 +79,11 @@ def salvar_preferencias(usuario_id, email=None, telefone=None):
         if telefone is not None:
             conn.execute("UPDATE usuarios SET telefone = ? WHERE id = ?", (telefone, usuario_id))
         conn.commit()
+
+def buscar_usuario_por_username(username):
+    with get_connection() as conn:
+        cursor = conn.execute("SELECT id, username, nome, email, telefone, senha_hash FROM usuarios WHERE username = ?", (username,))
+        row = cursor.fetchone()
+        if row:
+            return {"id": row[0], "username": row[1], "nome": row[2], "email": row[3], "telefone": row[4]}
+    return None
