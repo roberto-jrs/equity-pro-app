@@ -28,9 +28,9 @@ def login_ui():
     tab1, tab2 = st.tabs(["Login", "Criar Conta"])
 
     with tab1:
-        username = st.text_input("Usuário")
-        senha = st.text_input("Senha", type="password")
-        if st.button("Entrar"):
+        username = st.text_input("Usuário", key="login_user")
+        senha = st.text_input("Senha", type="password", key="login_pass")
+        if st.button("Entrar", key="btn_login"):
             user = verificar_login(username, senha)
             if user:
                 st.session_state["autenticado"] = True
@@ -40,13 +40,13 @@ def login_ui():
                 st.error("Usuário ou senha inválidos")
 
     with tab2:
-        new_username = st.text_input("Usuário (login)")
-        new_nome = st.text_input("Nome completo")
-        new_email = st.text_input("E-mail (opcional)")
-        new_telefone = st.text_input("Telefone (opcional)")
-        new_senha = st.text_input("Senha", type="password")
-        new_senha2 = st.text_input("Confirmar senha", type="password")
-        if st.button("Cadastrar"):
+        new_username = st.text_input("Usuário (login)", key="cad_user")
+        new_nome = st.text_input("Nome completo", key="cad_nome")
+        new_email = st.text_input("E-mail (opcional)", key="cad_email")
+        new_telefone = st.text_input("Telefone (opcional)", key="cad_telefone")
+        new_senha = st.text_input("Senha", type="password", key="cad_pass")
+        new_senha2 = st.text_input("Confirmar senha", type="password", key="cad_pass2")
+        if st.button("Cadastrar", key="btn_cad"):
             if new_senha != new_senha2:
                 st.error("Senhas não coincidem")
             elif len(new_username) < 3:
@@ -62,10 +62,9 @@ if not st.session_state["autenticado"]:
     login_ui()
     st.stop()
 
-# Se chegou aqui, está autenticado
 usuario_logado = st.session_state["usuario"]
 st.sidebar.success(f"👤 {usuario_logado['nome']}")
-if st.sidebar.button("Sair"):
+if st.sidebar.button("Sair", key="sair"):
     del st.session_state["autenticado"]
     del st.session_state["usuario"]
     st.rerun()
