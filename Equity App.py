@@ -9,11 +9,14 @@ import pytz
 from streamlit_autorefresh import st_autorefresh
 import os
 import numpy as np
+import smtplib
+from email.mime.text import MimeText
+from email.mime.multipart import MimeMultipart
 
 # ===================================================================
 # 1. CONFIGURAÇÃO DE PÁGINA
 # ===================================================================
-st.set_page_config(page_title="Equity Pro - Consultoria", layout="wide", page_icon="▣")
+st.set_page_config(page_title="Equity Pro - Advanced", layout="wide", page_icon="▣")
 
 # ===================================================================
 # 2. CONFIGURAÇÃO DA API (USANDO ST.SECRETS)
@@ -50,8 +53,24 @@ def macd(series, fast=12, slow=26, signal=9):
     histogram = macd_line - signal_line
     return macd_line, signal_line, histogram
 
+def bollinger_bands(series, length=20, std=2):
+    """Calcula Bollinger Bands"""
+    rolling_mean = series.rolling(window=length).mean()
+    rolling_std = series.rolling(window=length).std()
+    upper = rolling_mean + (rolling_std * std)
+    lower = rolling_mean - (rolling_std * std)
+    return upper, rolling_mean, lower
+
+def stochastic(high, low, close, k_period=14, d_period=3):
+    """Calcula Estocástico %K e %D"""
+    low_min = low.rolling(window=k_period).min()
+    high_max = high.rolling(window=k_period).max()
+    stoch_k = 100 * ((close - low_min) / (high_max - low_min))
+    stoch_d = stoch_k.rolling(window=d_period).mean()
+    return stoch_k, stoch_d
+
 # ===================================================================
-# 4. ESTADO DA SESSÃO
+# 4. ESTADO DA SESSÃO (inicialização completa)
 # ===================================================================
 if 'sel_idioma' not in st.session_state:
     st.session_state.sel_idioma = "English"
@@ -86,9 +105,19 @@ if 'meus_ativos' not in st.session_state:
         {"ticker": "BTC-USD", "nome": "Bitcoin", "setor": "Cripto", "moeda_base": "USD"},
         {"ticker": "ETH-USD", "nome": "Ethereum", "setor": "Cripto", "moeda_base": "USD"}
     ]
+# Configurações de e-mail (inicialmente vazias)
+if 'email_config' not in st.session_state:
+    st.session_state.email_config = {
+        "smtp_server": "",
+        "smtp_port": 587,
+        "email_from": "",
+        "email_password": "",
+        "email_to": "",
+        "enabled": False
+    }
 
 # ===================================================================
-# 5. TRADUÇÃO (completa, incluindo textos do botão expandir)
+# 5. TRADUÇÃO (expandida para novos textos)
 # ===================================================================
 idiomas = {
     "English": {
@@ -98,14 +127,23 @@ idiomas = {
         "alocacao": "📊 Asset Allocation", "terminal": "💡 Stock Terminal",
         "monitor": "Monitoring assets in sector:", "info_cambio": "Exchange rate:",
         "info_detalhe": "Purchase calculation based on", "quantidade_sugerida": "Suggested quantity:",
-        "atualizar": "⟲ Refresh", "historico": "HISTORICAL", "subtitulo": "Strategic Analysis & Clarity",
+        "atualizar": "⟲ Refresh", "historico": "HISTORICAL", "subtitulo": "Professional Analysis Suite",
         "ultima_at": "Last update:", "grafico_h": "Technical Charts", "btn_expandir": "📈 Expand All",
         "btn_recolher": "📐 Collapse All", "help_graficos": "Expand/Collapse all charts",
         "alertas_titulo": "🔔 Price Alerts", "criar_alerta": "Create Alert",
         "ticker_alerta": "Ticker", "preco_alerta": "Target Price",
         "acima_abaixo": "When price goes", "acima": "above", "abaixo": "below",
         "backtest_titulo": "📈 Backtesting (MA Crossover)", "periodo_back": "Period",
-        "executar_back": "Run Backtest", "exportar": "Export Data", "modo_noturno": "Night Mode"
+        "executar_back": "Run Backtest", "exportar": "Export Data", "modo_noturno": "Night Mode",
+        "gerenciar_ativos": "📁 Asset Management", "adicionar_manual": "Add manually",
+        "ticker_manual": "Ticker", "nome_manual": "Name", "setor_manual": "Sector",
+        "moeda_base_manual": "Base Currency", "remover_ativos": "Remove Assets",
+        "comparar": "📊 Compare Assets", "ativo1": "Asset 1", "ativo2": "Asset 2",
+        "email_config": "📧 Email Notifications", "smtp_server": "SMTP Server",
+        "smtp_port": "Port", "email_from": "From Email", "email_password": "Password (app password)",
+        "email_to": "To Email", "enable_email": "Enable email alerts",
+        "performance_sim": "📈 Simulated Performance", "periodo_graf": "Chart Period",
+        "intervalo_graf": "Interval", "gerar_relatorio": "📄 Generate Report"
     },
     "Português (BR)": {
         "titulo_idioma": "IDIOMA", "config": "CONFIGURAÇÕES", "moeda": "Moeda de Exibição:",
@@ -114,7 +152,7 @@ idiomas = {
         "alocacao": "📊 Alocação", "terminal": "💡 Terminal", "monitor": "Monitorando setor:",
         "info_cambio": "Câmbio:", "info_detalhe": "Cálculo de compra com base em",
         "quantidade_sugerida": "Quantidade sugerida:",
-        "atualizar": "⟲ Atualizar", "historico": "HISTÓRICO", "subtitulo": "Análise Estratégica e Clareza",
+        "atualizar": "⟲ Atualizar", "historico": "HISTÓRICO", "subtitulo": "Plataforma Profissional de Análise",
         "ultima_at": "Última atualização:", "grafico_h": "Gráficos Técnicos",
         "btn_expandir": "📈 Expandir Todos", "btn_recolher": "📐 Recolher Todos",
         "help_graficos": "Expandir/Recolher todos os gráficos",
@@ -122,16 +160,26 @@ idiomas = {
         "ticker_alerta": "Ativo", "preco_alerta": "Preço Alvo",
         "acima_abaixo": "Quando o preço estiver", "acima": "acima", "abaixo": "abaixo",
         "backtest_titulo": "📈 Backtest (Médias Móveis)", "periodo_back": "Período",
-        "executar_back": "Executar", "exportar": "Exportar Dados", "modo_noturno": "Modo Noturno"
+        "executar_back": "Executar", "exportar": "Exportar Dados", "modo_noturno": "Modo Noturno",
+        "gerenciar_ativos": "📁 Gerenciar Ativos", "adicionar_manual": "Adicionar manualmente",
+        "ticker_manual": "Código", "nome_manual": "Nome", "setor_manual": "Setor",
+        "moeda_base_manual": "Moeda Base", "remover_ativos": "Remover Ativos",
+        "comparar": "📊 Comparar Ativos", "ativo1": "Ativo 1", "ativo2": "Ativo 2",
+        "email_config": "📧 Notificações por E-mail", "smtp_server": "Servidor SMTP",
+        "smtp_port": "Porta", "email_from": "E-mail de envio", "email_password": "Senha (app password)",
+        "email_to": "E-mail destino", "enable_email": "Ativar alertas por e-mail",
+        "performance_sim": "📈 Performance Simulada", "periodo_graf": "Período do gráfico",
+        "intervalo_graf": "Intervalo", "gerar_relatorio": "📄 Gerar Relatório"
     },
     "Español": {
+        # (similar, por brevidade mantenho igual ao PT mas com tradução para ES, você pode completar depois)
         "titulo_idioma": "IDIOMA", "config": "CONFIGURACIÓN", "moeda": "Moneda:",
         "capital": "Capital de Simulación:", "filtro": "Filtrar por Sector:", "fuso": "Zona Horaria:",
         "todos": "Todos", "status_on": "MERCADO ABIERTO", "status_off": "MERCADO CERRADO",
         "alocacao": "📊 Asignación", "terminal": "💡 Terminal", "monitor": "Monitoreando sector:",
         "info_cambio": "Tipo de cambio:", "info_detalhe": "Cálculo de compra con base en",
         "quantidade_sugerida": "Cantidad sugerida:",
-        "atualizar": "⟲ Actualizar", "historico": "HISTÓRICO", "subtitulo": "Análisis Estratégico",
+        "atualizar": "⟲ Actualizar", "historico": "HISTÓRICO", "subtitulo": "Plataforma Profesional de Análisis",
         "ultima_at": "Última actualización:", "grafico_h": "Gráficos Técnicos",
         "btn_expandir": "📈 Expandir Todos", "btn_recolher": "📐 Contraer Todos",
         "help_graficos": "Expandir/Contraer todos los gráficos",
@@ -139,7 +187,16 @@ idiomas = {
         "ticker_alerta": "Activo", "preco_alerta": "Precio Objetivo",
         "acima_abaixo": "Cuando el precio esté", "acima": "encima", "abaixo": "debajo",
         "backtest_titulo": "📈 Backtest (Media Móvil)", "periodo_back": "Período",
-        "executar_back": "Ejecutar", "exportar": "Exportar Datos", "modo_noturno": "Modo Nocturno"
+        "executar_back": "Ejecutar", "exportar": "Exportar Datos", "modo_noturno": "Modo Nocturno",
+        "gerenciar_ativos": "📁 Gestionar Activos", "adicionar_manual": "Agregar manualmente",
+        "ticker_manual": "Ticker", "nome_manual": "Nombre", "setor_manual": "Sector",
+        "moeda_base_manual": "Moneda Base", "remover_ativos": "Eliminar Activos",
+        "comparar": "📊 Comparar Activos", "ativo1": "Activo 1", "ativo2": "Activo 2",
+        "email_config": "📧 Notificaciones por Email", "smtp_server": "Servidor SMTP",
+        "smtp_port": "Puerto", "email_from": "Email origen", "email_password": "Contraseña",
+        "email_to": "Email destino", "enable_email": "Activar alertas por email",
+        "performance_sim": "📈 Rendimiento Simulado", "periodo_graf": "Período del gráfico",
+        "intervalo_graf": "Intervalo", "gerar_relatorio": "📄 Generar Informe"
     }
 }
 
@@ -235,6 +292,49 @@ def executar_backtest(ticker, data_inicio, data_fim, short_ma=20, long_ma=50):
     total_return = df['Cumulative_Strategy'].iloc[-1] - 1 if not df.empty else 0
     return df, total_return
 
+def send_email_alert(subject, body, config):
+    """Envia e-mail usando configuração SMTP"""
+    if not config['enabled']:
+        return
+    try:
+        msg = MimeMultipart()
+        msg['From'] = config['email_from']
+        msg['To'] = config['email_to']
+        msg['Subject'] = subject
+        msg.attach(MimeText(body, 'plain'))
+        server = smtplib.SMTP(config['smtp_server'], config['smtp_port'])
+        server.starttls()
+        server.login(config['email_from'], config['email_password'])
+        server.send_message(msg)
+        server.quit()
+    except Exception as e:
+        st.warning(f"Falha ao enviar e-mail: {e}")
+
+def generate_report_html(ticker, nome, price, change, hist, indicadores, capital):
+    """Gera relatório HTML do ativo para download"""
+    html = f"""
+    <html>
+    <head><title>Relatório {ticker}</title>
+    <style>
+        body {{ font-family: Arial; margin: 20px; }}
+        h1 {{ color: #007bff; }}
+        .metric {{ background: #f0f2f6; padding: 10px; border-radius: 5px; margin: 10px 0; }}
+    </style>
+    </head>
+    <body>
+    <h1>Relatório de Análise - {nome} ({ticker})</h1>
+    <div class="metric">
+        <p>Preço atual: ${price:.2f}</p>
+        <p>Variação: {change:.2f}%</p>
+        <p>Capital simulado: ${capital:,.2f}</p>
+    </div>
+    <p>Relatório gerado em: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    <p><em>Gráficos técnicos estão anexados nas imagens ou visualize no app.</em></p>
+    </body>
+    </html>
+    """
+    return html
+
 # ===================================================================
 # 7. CSS + MODO NOTURNO
 # ===================================================================
@@ -255,7 +355,7 @@ else:
     """, unsafe_allow_html=True)
 
 # ===================================================================
-# 8. SIDEBAR
+# 8. SIDEBAR (configurações, gerenciamento de ativos, e-mail)
 # ===================================================================
 with st.sidebar:
     st.header(idiomas[st.session_state.sel_idioma]["titulo_idioma"])
@@ -273,6 +373,34 @@ with st.sidebar:
     st.toggle(t["modo_noturno"], key="modo_noturno")
 
     st.divider()
+    st.header(t["gerenciar_ativos"])
+    with st.expander(t["adicionar_manual"]):
+        col1m, col2m = st.columns(2)
+        with col1m:
+            novo_ticker = st.text_input(t["ticker_manual"], key="novo_ticker")
+            novo_nome = st.text_input(t["nome_manual"], key="novo_nome")
+        with col2m:
+            novo_setor = st.text_input(t["setor_manual"], key="novo_setor")
+            nova_moeda = st.selectbox(t["moeda_base_manual"], ["USD", "BRL"], key="nova_moeda")
+        if st.button("➕ Adicionar"):
+            if novo_ticker and novo_nome:
+                st.session_state.meus_ativos.append({
+                    "ticker": novo_ticker.upper(),
+                    "nome": novo_nome,
+                    "setor": novo_setor if novo_setor else "Personalizado",
+                    "moeda_base": nova_moeda
+                })
+                st.success(f"{novo_ticker} adicionado!")
+                st.rerun()
+    with st.expander(t["remover_ativos"]):
+        for idx, ativo in enumerate(st.session_state.meus_ativos):
+            col_rem1, col_rem2 = st.columns([3,1])
+            col_rem1.write(f"{ativo['ticker']} - {ativo['nome']}")
+            if col_rem2.button("🗑️", key=f"rem_{idx}"):
+                st.session_state.meus_ativos.pop(idx)
+                st.rerun()
+    
+    st.divider()
     st.header("🔔 " + t["alertas_titulo"])
     with st.expander(t["criar_alerta"]):
         col_a1, col_a2 = st.columns(2)
@@ -286,12 +414,12 @@ with st.sidebar:
                 st.session_state.alertas.append({
                     "ticker": ticker_alerta.upper(),
                     "preco": preco_alerta,
-                    "direcao": "above" if direcao == t["acima"] else "below"
+                    "direcao": "above" if direcao == t["acima"] else "below",
+                    "disparado": False
                 })
-                st.success(f"Alerta criado para {ticker_alerta.upper()} {direcao} {preco_alerta}")
+                st.success(f"Alerta criado para {ticker_alerta.upper()}")
             else:
                 st.error("Preencha ticker e preço válido.")
-
     if st.session_state.alertas:
         st.write("**Alertas ativos:**")
         for i, alert in enumerate(st.session_state.alertas):
@@ -299,6 +427,19 @@ with st.sidebar:
         if st.button("🗑️ Limpar todos"):
             st.session_state.alertas = []
             st.rerun()
+
+    st.divider()
+    st.header(t["email_config"])
+    with st.expander("Configurar e-mail"):
+        st.session_state.email_config['enabled'] = st.checkbox(t["enable_email"], value=st.session_state.email_config['enabled'])
+        st.session_state.email_config['smtp_server'] = st.text_input(t["smtp_server"], value=st.session_state.email_config['smtp_server'])
+        st.session_state.email_config['smtp_port'] = st.number_input(t["smtp_port"], value=st.session_state.email_config['smtp_port'], step=1)
+        st.session_state.email_config['email_from'] = st.text_input(t["email_from"], value=st.session_state.email_config['email_from'])
+        st.session_state.email_config['email_password'] = st.text_input(t["email_password"], type="password", value=st.session_state.email_config['email_password'])
+        st.session_state.email_config['email_to'] = st.text_input(t["email_to"], value=st.session_state.email_config['email_to'])
+        if st.button("Testar e-mail"):
+            send_email_alert("Teste Equity Pro", "Configuração de e-mail funcionando!", st.session_state.email_config)
+            st.success("Teste enviado (se configurado corretamente)")
 
     st.divider()
     st.header("📊 " + t["backtest_titulo"])
@@ -310,21 +451,20 @@ with st.sidebar:
             df_bt, ret = executar_backtest(ticker_bt, data_inicio, data_fim)
             if df_bt is not None:
                 st.session_state.backtest_result = (df_bt, ret, ticker_bt)
-                st.success(f"Backtest concluído. Retorno estratégia: {ret*100:.2f}%")
+                st.success(f"Backtest concluído. Retorno: {ret*100:.2f}%")
             else:
-                st.error("Dados insuficientes para o backtest.")
+                st.error("Dados insuficientes.")
         else:
             st.warning("Informe um ticker.")
 
 # ===================================================================
-# 9. HEADER E STATUS (com botão de expandir)
+# 9. HEADER E STATUS (com botões)
 # ===================================================================
 st.markdown(f"<h1 style='font-size:2.5rem;'>▣ EQUITY PRO</h1><p>{t['subtitulo']}</p>", unsafe_allow_html=True)
 
 status_label, status_color, status_text = check_market_status()
 st.markdown(f"<div style='background-color: {status_color}; padding: 8px; border-radius: 4px; text-align: center; color: white; font-weight: bold; margin-bottom: 20px;'>{status_text}</div>", unsafe_allow_html=True)
 
-# Três colunas: Refresh, Expandir/Recolher, Exportar
 col_refresh, col_expand, col_export = st.columns([2, 1, 1])
 with col_refresh:
     if st.button(t["atualizar"], use_container_width=True):
@@ -344,11 +484,11 @@ with col_export:
                 if isinstance(hist_exp.columns, pd.MultiIndex):
                     hist_exp.columns = hist_exp.columns.get_level_values(0)
                 csv = hist_exp.to_csv().encode('utf-8')
-                st.download_button("Download CSV do gráfico", csv, f"{ticker_exp}_data.csv", "text/csv", key="export_csv_btn")
+                st.download_button("Download CSV", csv, f"{ticker_exp}_data.csv", "text/csv", key="export_csv_btn")
             else:
-                st.warning("Sem dados para exportar.")
+                st.warning("Sem dados.")
         else:
-            st.warning("Nenhum ativo disponível.")
+            st.warning("Nenhum ativo.")
 
 st.caption(f"{t['ultima_at']} {get_now_local().strftime('%H:%M:%S')}")
 
@@ -376,14 +516,14 @@ with col2:
 st.divider()
 
 # ===================================================================
-# 11. FILTRO DE SETOR
+# 11. FILTRO DE SETOR E LISTA DE ATIVOS
 # ===================================================================
 setores_lista = sorted(list(set([a['setor'] for a in st.session_state.meus_ativos])))
 filtro_setor = st.selectbox(t["filtro"], [t["todos"]] + setores_lista, key="setor_selector")
 ativos_f = st.session_state.meus_ativos if filtro_setor == t["todos"] else [a for a in st.session_state.meus_ativos if a['setor'] == filtro_setor]
 
 # ===================================================================
-# 12. CARDS DE ATIVOS COM GRÁFICOS INTERATIVOS
+# 12. CARDS DE ATIVOS (com gráficos interativos e período selecionável)
 # ===================================================================
 cols = st.columns(3)
 for i, ativo in enumerate(ativos_f):
@@ -426,13 +566,24 @@ for i, ativo in enumerate(ativos_f):
             st.caption(f"{t['info_detalhe']} {simb_m} {st.session_state.invest_save:,.2f} → {t['quantidade_sugerida']} **{qtd_sugerida:.4f}**")
             st.caption(f"Code: `{ticker}`")
 
-            # GRÁFICOS COM SELETOR
+            # GRÁFICOS COM SELETOR DE PERÍODO E INDICADORES AVANÇADOS
             with st.expander(f"📈 {t['grafico_h']}", expanded=st.session_state.show_all_charts):
+                # Seletor de período e intervalo
+                periodo_map = {
+                    "1d": ("1d", "1m"),
+                    "5d": ("5d", "5m"),
+                    "1mo": ("1mo", "1d"),
+                    "3mo": ("3mo", "1d"),
+                    "1y": ("1y", "1wk")
+                }
+                periodo_esc = st.selectbox(t["periodo_graf"], list(periodo_map.keys()), key=f"per_{ticker}_{i}")
+                intervalo_esc = periodo_map[periodo_esc][1]
+                
                 try:
                     yf_ticker = ticker.replace("BINANCE:", "").replace("USDT", "-USD")
-                    hist = yf.download(yf_ticker, period="1mo", interval="1d", progress=False)
+                    hist = yf.download(yf_ticker, period=periodo_esc, interval=intervalo_esc, progress=False)
                     if not hist.empty and len(hist) > 20:
-                        # Simplificar colunas se MultiIndex
+                        # Simplificar colunas
                         if isinstance(hist.columns, pd.MultiIndex):
                             hist.columns = hist.columns.get_level_values(0)
                         
@@ -443,18 +594,23 @@ for i, ativo in enumerate(ativos_f):
                         macd_line, signal_line, hist['MACD_hist'] = macd(hist['Close'])
                         hist['MACD'] = macd_line
                         hist['MACD_signal'] = signal_line
+                        # Bollinger Bands
+                        upper_bb, middle_bb, lower_bb = bollinger_bands(hist['Close'])
+                        hist['BB_upper'] = upper_bb
+                        hist['BB_middle'] = middle_bb
+                        hist['BB_lower'] = lower_bb
+                        # Estocástico
+                        stoch_k, stoch_d = stochastic(hist['High'], hist['Low'], hist['Close'])
+                        hist['Stoch_K'] = stoch_k
+                        hist['Stoch_D'] = stoch_d
                         
                         # Detectar coluna de volume
-                        col_volume = None
-                        for col in hist.columns:
-                            if 'volume' in col.lower():
-                                col_volume = col
-                                break
+                        col_volume = next((col for col in hist.columns if 'volume' in col.lower()), None)
                         
-                        # Seletor de tipo de gráfico (horizontal)
+                        # Seletor de tipo de gráfico (expandido)
                         tipo_grafico = st.radio(
                             "Tipo de gráfico:",
-                            ["Candlestick", "Volume", "RSI", "MACD"],
+                            ["Candlestick", "Volume", "RSI", "MACD", "Bollinger Bands", "Estocástico"],
                             horizontal=True,
                             key=f"graf_sel_{ticker}_{i}"
                         )
@@ -492,13 +648,80 @@ for i, ativo in enumerate(ativos_f):
                             fig.update_layout(title="MACD", height=400)
                             st.plotly_chart(fig, use_container_width=True)
                             
+                        elif tipo_grafico == "Bollinger Bands":
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(x=hist.index, y=hist['Close'], name='Preço', line=dict(color='blue')))
+                            fig.add_trace(go.Scatter(x=hist.index, y=hist['BB_upper'], name='BB Superior', line=dict(color='red', dash='dash')))
+                            fig.add_trace(go.Scatter(x=hist.index, y=hist['BB_lower'], name='BB Inferior', line=dict(color='green', dash='dash')))
+                            fig.add_trace(go.Scatter(x=hist.index, y=hist['BB_middle'], name='Média', line=dict(color='orange')))
+                            fig.update_layout(title="Bollinger Bands", height=400)
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                        elif tipo_grafico == "Estocástico":
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(x=hist.index, y=hist['Stoch_K'], name='%K'))
+                            fig.add_trace(go.Scatter(x=hist.index, y=hist['Stoch_D'], name='%D'))
+                            fig.add_hline(y=80, line_dash="dash", line_color="red")
+                            fig.add_hline(y=20, line_dash="dash", line_color="green")
+                            fig.update_yaxes(range=[0,100])
+                            fig.update_layout(title="Estocástico", height=400)
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                        # Performance simulada
+                        st.subheader(t["performance_sim"])
+                        capital_inicial = st.session_state.invest_save
+                        # Converter preços para moeda de exibição para simulação (simplificado)
+                        retornos = hist['Close'].pct_change().dropna()
+                        patrimonio = capital_inicial * (1 + retornos).cumprod()
+                        fig_perf = px.line(x=patrimonio.index, y=patrimonio, title="Evolução do Patrimônio", labels={"x": "Data", "y": f"Patrimônio ({simb})"})
+                        fig_perf.update_layout(height=300)
+                        st.plotly_chart(fig_perf, use_container_width=True)
+                        st.caption(f"Patrimônio final: {simb} {patrimonio.iloc[-1]:,.2f}")
+
+                        # Botão gerar relatório
+                        if st.button(t["gerar_relatorio"], key=f"rel_{ticker}_{i}"):
+                            html_report = generate_report_html(ticker, ativo['nome'], price, change, hist, "", capital_inicial)
+                            st.download_button("Download Relatório HTML", html_report, f"relatorio_{ticker}.html", "text/html")
+                            
                     else:
                         st.warning("Dados históricos insuficientes para gráficos avançados.")
                 except Exception as e:
                     st.error(f"Erro no gráfico: {str(e)}")
 
 # ===================================================================
-# 13. BACKTEST RESULTADOS
+# 13. COMPARAÇÃO DE DOIS ATIVOS
+# ===================================================================
+st.divider()
+st.header(t["comparar"])
+col_c1, col_c2 = st.columns(2)
+with col_c1:
+    ativo1 = st.selectbox(t["ativo1"], [a['ticker'] for a in st.session_state.meus_ativos], key="comp1")
+with col_c2:
+    ativo2 = st.selectbox(t["ativo2"], [a['ticker'] for a in st.session_state.meus_ativos], key="comp2")
+if ativo1 and ativo2 and ativo1 != ativo2:
+    try:
+        df1 = yf.download(ativo1, period="1mo", interval="1d", progress=False)
+        df2 = yf.download(ativo2, period="1mo", interval="1d", progress=False)
+        if not df1.empty and not df2.empty:
+            # Normalizar preços (base 100)
+            norm1 = df1['Close'] / df1['Close'].iloc[0] * 100
+            norm2 = df2['Close'] / df2['Close'].iloc[0] * 100
+            fig_comp = go.Figure()
+            fig_comp.add_trace(go.Scatter(x=norm1.index, y=norm1, name=ativo1))
+            fig_comp.add_trace(go.Scatter(x=norm2.index, y=norm2, name=ativo2))
+            fig_comp.update_layout(title="Comparação de Preços (Base 100)", yaxis_title="Preço Normalizado", height=400)
+            st.plotly_chart(fig_comp, use_container_width=True)
+            
+            # Correlação
+            correl = df1['Close'].corr(df2['Close'])
+            st.metric("Correlação", f"{correl:.4f}")
+        else:
+            st.warning("Dados insuficientes para comparação.")
+    except Exception as e:
+        st.error(f"Erro na comparação: {e}")
+
+# ===================================================================
+# 14. BACKTEST RESULTADOS
 # ===================================================================
 if 'backtest_result' in st.session_state:
     df_bt, ret, ticker_bt = st.session_state.backtest_result
@@ -513,19 +736,28 @@ if 'backtest_result' in st.session_state:
     st.plotly_chart(fig_bt, use_container_width=True)
 
 # ===================================================================
-# 14. ALERTAS
+# 15. ALERTAS (com e-mail)
 # ===================================================================
 if st.session_state.alertas:
     for alerta in st.session_state.alertas:
         preco_atual, _ = get_safe_quote(alerta["ticker"])
         if preco_atual > 0:
-            if alerta["direcao"] == "above" and preco_atual >= alerta["preco"]:
-                st.toast(f"🔔 ALERTA: {alerta['ticker']} atingiu ${preco_atual:.2f} (acima de ${alerta['preco']})", icon="⚠️")
-            elif alerta["direcao"] == "below" and preco_atual <= alerta["preco"]:
-                st.toast(f"🔔 ALERTA: {alerta['ticker']} caiu para ${preco_atual:.2f} (abaixo de ${alerta['preco']})", icon="⚠️")
+            disparar = False
+            if alerta["direcao"] == "above" and preco_atual >= alerta["preco"] and not alerta.get("disparado", False):
+                disparar = True
+            elif alerta["direcao"] == "below" and preco_atual <= alerta["preco"] and not alerta.get("disparado", False):
+                disparar = True
+            if disparar:
+                msg = f"ALERTA: {alerta['ticker']} está ${preco_atual:.2f} ({alerta['direcao']} de ${alerta['preco']})"
+                st.toast(f"🔔 {msg}", icon="⚠️")
+                # Enviar e-mail se configurado
+                if st.session_state.email_config['enabled']:
+                    send_email_alert(f"Alerta Equity Pro - {alerta['ticker']}", msg, st.session_state.email_config)
+                # Marcar como disparado para não repetir
+                alerta["disparado"] = True
 
 # ===================================================================
-# 15. REFRESH AUTOMÁTICO
+# 16. REFRESH AUTOMÁTICO
 # ===================================================================
 status_label, _, _ = check_market_status()
 if status_label == "ON":
