@@ -13,7 +13,35 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from database import cadastrar_usuario, verificar_login, salvar_preferencias
+import hashlib
+import time
 
+# Gera um token único para o usuário
+def gerar_token(username):
+    secret = st.secrets.get("SESSION_SECRET", "equitypro2024")  # segredo fixo (pode guardar no secrets.toml)
+    timestamp = int(time.time())
+    raw = f"{username}|{timestamp}|{secret}"
+    token = hashlib.sha256(raw.encode()).hexdigest()
+    return f"{username}|{timestamp}|{token}"
+
+# Valida o token e retorna o username se válido (e dentro do prazo de validade)
+def validar_token(token_str, dias_validade=30):
+    try:
+        username, timestamp_str, token = token_str.split("|")
+        timestamp = int(timestamp_str)
+        # Verifica se não expirou (dias_validade)
+        if time.time() - timestamp > dias_validade * 86400:
+            return None
+        # Verifica o hash
+        secret = st.secrets.get("SESSION_SECRET", "equitypro2024")
+        raw = f"{username}|{timestamp}|{secret}"
+        expected = hashlib.sha256(raw.encode()).hexdigest()
+        if token == expected:
+            return username
+    except:
+        pass
+    return None
+    
 # ===================================================================
 # 1. CONFIGURAÇÃO DE PÁGINA
 # ===================================================================
@@ -23,19 +51,30 @@ st.set_page_config(page_title="Equity Pro - Advanced", layout="wide", page_icon=
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
+# Tenta restaurar login a partir do token na URL
+if not st.session_state["autenticado"]:
+    token_url = st.query_params.get("session")
+    if token_url:
+        username = validar_token(token_url)
+        if username:
+            # Busca os dados do usuário pelo username (já temos função verificar_login? vamos adaptar)
+            # Precisamos de uma função para buscar usuário por username. Vamos criar abaixo.
+            user = buscar_usuario_por_username(username)
+            if user:
+                st.session_state["autenticado"] = True
+                st.session_state["usuario"] = user
+                st.rerun()
+
 def login_ui():
     st.title("🔐 Equity Pro - Acesso")
     
-    # Controle de qual "aba" está ativa
     if "aba_atual" not in st.session_state:
         st.session_state["aba_atual"] = "Login"
     
-    # Se o usuário acabou de cadastrar, força a aba Login
     if st.session_state.get("cadastro_sucesso", False):
         st.session_state["aba_atual"] = "Login"
-        st.session_state["cadastro_sucesso"] = False  # reseta flag
+        st.session_state["cadastro_sucesso"] = False
     
-    # Exibir radio horizontal como seleção de abas
     aba = st.radio(
         "",
         ["Login", "Criar Conta"],
@@ -48,16 +87,20 @@ def login_ui():
     if aba == "Login":
         username = st.text_input("Usuário", key="login_user")
         senha = st.text_input("Senha", type="password", key="login_pass")
+        lembrar = st.checkbox("Lembrar meu acesso por 30 dias")
         if st.button("Entrar", key="btn_login"):
             user = verificar_login(username, senha)
             if user:
                 st.session_state["autenticado"] = True
                 st.session_state["usuario"] = user
+                if lembrar:
+                    token = gerar_token(username)
+                    st.query_params["session"] = token
                 st.rerun()
             else:
                 st.error("Usuário ou senha inválidos")
     
-    else:  # Criar Conta
+    else:
         new_username = st.text_input("Usuário (login)", key="cad_user")
         new_nome = st.text_input("Nome completo", key="cad_nome")
         new_email = st.text_input("E-mail", key="cad_email")
@@ -72,19 +115,32 @@ def login_ui():
             else:
                 ok = cadastrar_usuario(new_username, new_nome, new_senha, new_email, new_telefone)
                 if ok:
-                    st.session_state["cadastro_sucesso"] = True  # ativa flag
+                    st.session_state["cadastro_sucesso"] = True
                     st.success("Usuário criado! Redirecionando para o login...")
                     st.rerun()
                 else:
                     st.error("Usuário já existe")
 
+# Função auxiliar para buscar usuário por username (adicione no database.py)
+def buscar_usuario_por_username(username):
+    from database import get_connection
+    with get_connection() as conn:
+        cursor = conn.execute("SELECT id, username, nome, email, telefone, senha_hash FROM usuarios WHERE username = ?", (username,))
+        row = cursor.fetchone()
+        if row:
+            return {"id": row[0], "username": row[1], "nome": row[2], "email": row[3], "telefone": row[4]}
+    return None
+
 if not st.session_state["autenticado"]:
     login_ui()
     st.stop()
 
+# Se chegou aqui, está autenticado
 usuario_logado = st.session_state["usuario"]
 st.sidebar.success(f"👤 @{usuario_logado['username']}")
 if st.sidebar.button("Sair", key="sair"):
+    # Limpa token da URL também
+    st.query_params.clear()
     del st.session_state["autenticado"]
     del st.session_state["usuario"]
     st.rerun()
