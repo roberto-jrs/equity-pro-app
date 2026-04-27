@@ -566,7 +566,7 @@ with st.sidebar:
 # ===================================================================
 # 9. HEADER E STATUS (com botões)
 # ===================================================================
-st.markdown(f"<h1 style='font-size:2.5rem;'>▣ EQUITY PRO</h1><p>{t['subtitulo']}</p>", unsafe_allow_html=True)
+st.markdown(f"<h1 style='font-size:2.5rem;'>〽︎ EQUITY PRO</h1><p>{t['subtitulo']}</p>", unsafe_allow_html=True)
 
 status_label, status_color, status_text = check_market_status()
 st.markdown(f"<div style='background-color: {status_color}; padding: 8px; border-radius: 4px; text-align: center; color: white; font-weight: bold; margin-bottom: 20px;'>{status_text}</div>", unsafe_allow_html=True)
