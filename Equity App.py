@@ -156,8 +156,6 @@ if 'sel_fuso' not in st.session_state:
     st.session_state.sel_fuso = 'America/New_York'
 if 'show_all_charts' not in st.session_state:
     st.session_state.show_all_charts = False
-if 'modo_noturno' not in st.session_state:
-    st.session_state.modo_noturno = False
 if 'alertas' not in st.session_state:
     st.session_state.alertas = []
 if 'meus_ativos' not in st.session_state:
@@ -423,7 +421,6 @@ with st.sidebar:
     st.selectbox(t["fuso"], fusos_lista, key='sel_fuso')
     st.selectbox(t["moeda"], ["USD ($)", "BRL (R$)", "EUR (€)"], key="moeda_save")
     st.number_input(t["capital"], min_value=0.0, step=1000.0, value=st.session_state.invest_save, key="invest_save")
-    st.toggle(t["modo_noturno"], key="modo_noturno")
 
     st.divider()
     st.header(t["gerenciar_ativos"])
