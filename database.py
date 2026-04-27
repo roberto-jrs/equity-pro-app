@@ -7,7 +7,7 @@ def get_connection():
     return sqlite3.connect(DB_NAME)
 
 def init_db():
-    """Cria as tabelas se não existirem, garantindo a coluna telefone."""
+    """Cria as tabelas com a estrutura correta, recriando se necessário."""
     with get_connection() as conn:
         cursor = conn.cursor()
         
@@ -20,21 +20,11 @@ def init_db():
             cursor.execute("PRAGMA table_info(usuarios)")
             colunas = [col[1] for col in cursor.fetchall()]
             if 'telefone' not in colunas:
-                # Adiciona a coluna telefone
-                cursor.execute("ALTER TABLE usuarios ADD COLUMN telefone TEXT")
+                # Se não tem telefone, apaga a tabela e recria
+                cursor.execute("DROP TABLE usuarios")
+                criar_tabela_usuarios(cursor)
         else:
-            # Cria a tabela do zero com todas as colunas
-            cursor.execute('''
-                CREATE TABLE usuarios (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    nome TEXT NOT NULL,
-                    email TEXT,
-                    telefone TEXT,
-                    senha_hash TEXT NOT NULL,
-                    data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
+            criar_tabela_usuarios(cursor)
         
         # Cria a tabela de alertas (se não existir)
         cursor.execute('''
@@ -50,6 +40,19 @@ def init_db():
             )
         ''')
         conn.commit()
+
+def criar_tabela_usuarios(cursor):
+    cursor.execute('''
+        CREATE TABLE usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            nome TEXT NOT NULL,
+            email TEXT,
+            telefone TEXT,
+            senha_hash TEXT NOT NULL,
+            data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
 
 def cadastrar_usuario(username, nome, senha, email=None, telefone=None):
     hashed = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt())
