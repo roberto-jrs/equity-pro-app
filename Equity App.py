@@ -12,6 +12,7 @@ import numpy as np
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from database import init_db, cadastrar_usuario, verificar_login
 
 # ===================================================================
 # 1. CONFIGURAÇÃO DE PÁGINA
