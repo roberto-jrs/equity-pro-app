@@ -12,7 +12,7 @@ import numpy as np
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from database import cadastrar_usuario, verificar_login, salvar_preferencias
+from database import cadastrar_usuario, verificar_login, salvar_preferencias, buscar_usuario_por_username
 import hashlib
 import time
 
