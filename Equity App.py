@@ -42,8 +42,8 @@ def login_ui():
     with tab2:
         new_username = st.text_input("Usuário (login)", key="cad_user")
         new_nome = st.text_input("Nome completo", key="cad_nome")
-        new_email = st.text_input("E-mail (opcional)", key="cad_email")
-        new_telefone = st.text_input("Telefone (opcional)", key="cad_telefone")
+        new_email = st.text_input("E-mail", key="cad_email")
+        new_telefone = st.text_input("Telefone (Opcional)", key="cad_telefone")
         new_senha = st.text_input("Senha", type="password", key="cad_pass")
         new_senha2 = st.text_input("Confirmar senha", type="password", key="cad_pass2")
         if st.button("Cadastrar", key="btn_cad"):
