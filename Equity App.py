@@ -19,6 +19,58 @@ from database import init_db, cadastrar_usuario, verificar_login
 # ===================================================================
 st.set_page_config(page_title="Equity Pro - Advanced", layout="wide", page_icon="▣")
 
+# ========== CONTROLE DE AUTENTICAÇÃO ==========
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+
+def login_ui():
+    st.title("🔐 Equity Pro - Acesso")
+    tab1, tab2 = st.tabs(["Login", "Criar Conta"])
+
+    with tab1:
+        username = st.text_input("Usuário")
+        senha = st.text_input("Senha", type="password")
+        if st.button("Entrar"):
+            user = verificar_login(username, senha)
+            if user:
+                st.session_state["autenticado"] = True
+                st.session_state["usuario"] = user
+                st.rerun()
+            else:
+                st.error("Usuário ou senha inválidos")
+
+    with tab2:
+        new_username = st.text_input("Usuário (login)")
+        new_nome = st.text_input("Nome completo")
+        new_email = st.text_input("E-mail (opcional)")
+        new_telefone = st.text_input("Telefone (opcional)")
+        new_senha = st.text_input("Senha", type="password")
+        new_senha2 = st.text_input("Confirmar senha", type="password")
+        if st.button("Cadastrar"):
+            if new_senha != new_senha2:
+                st.error("Senhas não coincidem")
+            elif len(new_username) < 3:
+                st.error("Usuário deve ter pelo menos 3 caracteres")
+            else:
+                ok = cadastrar_usuario(new_username, new_nome, new_senha, new_email, new_telefone)
+                if ok:
+                    st.success("Usuário criado! Faça login.")
+                else:
+                    st.error("Usuário já existe")
+
+if not st.session_state["autenticado"]:
+    login_ui()
+    st.stop()
+
+# Se chegou aqui, está autenticado
+usuario_logado = st.session_state["usuario"]
+st.sidebar.success(f"👤 {usuario_logado['nome']}")
+if st.sidebar.button("Sair"):
+    del st.session_state["autenticado"]
+    del st.session_state["usuario"]
+    st.rerun()
+# ========== FIM DA AUTENTICAÇÃO ==========
+
 # ===================================================================
 # 2. CONFIGURAÇÃO DA API (USANDO ST.SECRETS)
 # ===================================================================
