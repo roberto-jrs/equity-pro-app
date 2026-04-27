@@ -7,21 +7,36 @@ def get_connection():
     return sqlite3.connect(DB_NAME)
 
 def init_db():
-    """Cria a tabela de usuários se não existir."""
+    """Cria as tabelas se não existirem, garantindo a coluna telefone."""
     with get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                nome TEXT NOT NULL,
-                email TEXT,
-                telefone TEXT,
-                senha_hash TEXT NOT NULL,
-                data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        # Tabela de alertas personalizados (cada usuário tem seus alertas)
+        
+        # Verifica se a tabela usuarios existe
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='usuarios'")
+        table_exists = cursor.fetchone()
+        
+        if table_exists:
+            # Verifica se a coluna telefone existe
+            cursor.execute("PRAGMA table_info(usuarios)")
+            colunas = [col[1] for col in cursor.fetchall()]
+            if 'telefone' not in colunas:
+                # Adiciona a coluna telefone
+                cursor.execute("ALTER TABLE usuarios ADD COLUMN telefone TEXT")
+        else:
+            # Cria a tabela do zero com todas as colunas
+            cursor.execute('''
+                CREATE TABLE usuarios (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    nome TEXT NOT NULL,
+                    email TEXT,
+                    telefone TEXT,
+                    senha_hash TEXT NOT NULL,
+                    data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+        
+        # Cria a tabela de alertas (se não existir)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS alertas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +52,6 @@ def init_db():
         conn.commit()
 
 def cadastrar_usuario(username, nome, senha, email=None, telefone=None):
-    """Insere um novo usuário com senha criptografada."""
     hashed = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt())
     with get_connection() as conn:
         try:
@@ -51,7 +65,6 @@ def cadastrar_usuario(username, nome, senha, email=None, telefone=None):
             return False
 
 def verificar_login(username, senha):
-    """Retorna o usuário se a senha estiver correta, senão None."""
     with get_connection() as conn:
         cursor = conn.execute("SELECT id, username, nome, email, telefone, senha_hash FROM usuarios WHERE username = ?", (username,))
         user = cursor.fetchone()
@@ -60,21 +73,7 @@ def verificar_login(username, senha):
     return None
 
 def salvar_preferencias(usuario_id, email=None, telefone=None):
-    """Atualiza e-mail e telefone do usuário."""
     with get_connection() as conn:
         conn.execute("UPDATE usuarios SET email = COALESCE(?, email), telefone = COALESCE(?, telefone) WHERE id = ?",
                      (email, telefone, usuario_id))
         conn.commit()
-
-def adicionar_alerta(usuario_id, ticker, preco_alvo, direcao):
-    with get_connection() as conn:
-        conn.execute(
-            "INSERT INTO alertas (usuario_id, ticker, preco_alvo, direcao) VALUES (?, ?, ?, ?)",
-            (usuario_id, ticker.upper(), preco_alvo, direcao)
-        )
-        conn.commit()
-
-def listar_alertas_usuario(usuario_id):
-    with get_connection() as conn:
-        cursor = conn.execute("SELECT id, ticker, preco_alvo, direcao FROM alertas WHERE usuario_id = ? AND ativo = 1", (usuario_id,))
-        return cursor.fetchall()
