@@ -408,31 +408,6 @@ def generate_report_html(ticker, nome, price, change, hist, indicadores, capital
     return html
 
 # ===================================================================
-# 7. CSS + MODO NOTURNO
-# ===================================================================
-if st.session_state.modo_noturno:
-    st.markdown("""
-        <style>
-            .stApp { background-color: #0E1117; color: #FAFAFA; }
-            .css-1d391kg { background-color: #1E1E1E; }
-            .st-bw { color: #FAFAFA; }
-            div[data-testid="stExpander"] { background-color: #1E1E1E; }
-            /* Ajuste adicional para modo noturno */
-            .stTextInput > div > div > input, .stSelectbox > div > div > select {
-                background-color: #1E1E1E;
-                color: white;
-            }
-            .stButton > button {
-                background-color: #007bff;
-                color: white;
-            }
-        </style>
-    """, unsafe_allow_html=True)
-else:
-    # Modo claro: não aplicamos CSS customizado, usa o tema padrão do Streamlit
-    pass
-
-# ===================================================================
 # 8. SIDEBAR (configurações, gerenciamento de ativos, e-mail)
 # ===================================================================
 with st.sidebar:
