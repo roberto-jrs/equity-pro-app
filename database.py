@@ -1,32 +1,29 @@
 import sqlite3
 import bcrypt
 
-DB_NAME = "equity_pro_novo.db"
+# NOVO NOME DO BANCO - FORÇA CRIAÇÃO LIMPA
+DB_NAME = "equity_pro_v2.db"
 
 def get_connection():
     return sqlite3.connect(DB_NAME)
 
 def init_db():
-    """Cria as tabelas com a estrutura correta, recriando se necessário."""
+    """Cria as tabelas com a estrutura correta."""
     with get_connection() as conn:
         cursor = conn.cursor()
-        
-        # Verifica se a tabela usuarios existe
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='usuarios'")
-        table_exists = cursor.fetchone()
-        
-        if table_exists:
-            # Verifica se a coluna telefone existe
-            cursor.execute("PRAGMA table_info(usuarios)")
-            colunas = [col[1] for col in cursor.fetchall()]
-            if 'telefone' not in colunas:
-                # Se não tem telefone, apaga a tabela e recria
-                cursor.execute("DROP TABLE usuarios")
-                criar_tabela_usuarios(cursor)
-        else:
-            criar_tabela_usuarios(cursor)
-        
-        # Cria a tabela de alertas (se não existir)
+        # Tabela de usuários com todos os campos
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                nome TEXT NOT NULL,
+                email TEXT,
+                telefone TEXT,
+                senha_hash TEXT NOT NULL,
+                data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        # Tabela de alertas
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS alertas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,19 +37,6 @@ def init_db():
             )
         ''')
         conn.commit()
-
-def criar_tabela_usuarios(cursor):
-    cursor.execute('''
-        CREATE TABLE usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            nome TEXT NOT NULL,
-            email TEXT,
-            telefone TEXT,
-            senha_hash TEXT NOT NULL,
-            data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
 
 def cadastrar_usuario(username, nome, senha, email=None, telefone=None):
     hashed = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt())
