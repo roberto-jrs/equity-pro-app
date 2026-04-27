@@ -25,9 +25,27 @@ if "autenticado" not in st.session_state:
 
 def login_ui():
     st.title("🔐 Equity Pro - Acesso")
-    tab1, tab2 = st.tabs(["Login", "Criar Conta"])
-
-    with tab1:
+    
+    # Controle de qual "aba" está ativa
+    if "aba_atual" not in st.session_state:
+        st.session_state["aba_atual"] = "Login"
+    
+    # Se o usuário acabou de cadastrar, força a aba Login
+    if st.session_state.get("cadastro_sucesso", False):
+        st.session_state["aba_atual"] = "Login"
+        st.session_state["cadastro_sucesso"] = False  # reseta flag
+    
+    # Exibir radio horizontal como seleção de abas
+    aba = st.radio(
+        "",
+        ["Login", "Criar Conta"],
+        index=0 if st.session_state["aba_atual"] == "Login" else 1,
+        horizontal=True,
+        key="selecao_aba"
+    )
+    st.session_state["aba_atual"] = aba
+    
+    if aba == "Login":
         username = st.text_input("Usuário", key="login_user")
         senha = st.text_input("Senha", type="password", key="login_pass")
         if st.button("Entrar", key="btn_login"):
@@ -38,8 +56,8 @@ def login_ui():
                 st.rerun()
             else:
                 st.error("Usuário ou senha inválidos")
-
-    with tab2:
+    
+    else:  # Criar Conta
         new_username = st.text_input("Usuário (login)", key="cad_user")
         new_nome = st.text_input("Nome completo", key="cad_nome")
         new_email = st.text_input("E-mail", key="cad_email")
@@ -54,7 +72,9 @@ def login_ui():
             else:
                 ok = cadastrar_usuario(new_username, new_nome, new_senha, new_email, new_telefone)
                 if ok:
-                    st.success("Usuário criado! Faça login.")
+                    st.session_state["cadastro_sucesso"] = True  # ativa flag
+                    st.success("Usuário criado! Redirecionando para o login...")
+                    st.rerun()
                 else:
                     st.error("Usuário já existe")
 
