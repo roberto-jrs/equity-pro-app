@@ -87,7 +87,7 @@ def login_ui():
     if aba == "Login":
         username = st.text_input("Usuário", key="login_user")
         senha = st.text_input("Senha", type="password", key="login_pass")
-        lembrar = st.checkbox("Lembrar meu acesso")
+        lembrar = st.checkbox("Lembrar meu acesso, beleza Bia?")
         if st.button("Entrar", key="btn_login"):
             user = verificar_login(username, senha)
             if user:
