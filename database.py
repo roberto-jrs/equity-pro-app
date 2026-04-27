@@ -1,7 +1,7 @@
 import sqlite3
 import bcrypt
 
-DB_NAME = "equity_pro.db"
+DB_NAME = "equity_pro_novo.db"
 
 def get_connection():
     return sqlite3.connect(DB_NAME)
