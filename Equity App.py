@@ -140,31 +140,31 @@ if not st.session_state["autenticado"]:
 # Se chegou aqui, está autenticado
 usuario_logado = st.session_state["usuario"]
 st.sidebar.success(f"👤 @{usuario_logado['username']}")
-# Botão de teste de e-mail (temporário)
+# Botão de teste de e-mail (usando Gmail SMTP)
 with st.sidebar.expander("📧 Testar E-mail"):
     st.write(f"E-mail cadastrado: **{usuario_logado.get('email', 'Nenhum e-mail cadastrado')}**")
     if st.button("Enviar e-mail de teste agora"):
         email_destino = usuario_logado.get('email')
         if email_destino:
-            from email_utils import enviar_email_brevo
+            from email_utils import enviar_email_gmail  # Importa a função do Gmail
             assunto = "Teste Equity Pro - Alerta"
             corpo = f"""
             <html>
             <body>
                 <h2>✅ Teste de notificação</h2>
                 <p>Olá {usuario_logado['nome']},</p>
-                <p>Este é um e-mail de teste enviado pelo <strong>Equity Pro</strong>.</p>
-                <p>Se você recebeu, a integração com Brevo está funcionando perfeitamente!</p>
+                <p>Este é um e-mail de teste enviado pelo <strong>Equity Pro</strong> via Gmail.</p>
+                <p>Se você recebeu, a integração está funcionando perfeitamente!</p>
                 <hr>
                 <small>Equity Pro - Análise e Simulação</small>
             </body>
             </html>
             """
-            sucesso = enviar_email_brevo(email_destino, usuario_logado['nome'], assunto, corpo)
+            sucesso = enviar_email_gmail(email_destino, usuario_logado['nome'], assunto, corpo)  # função trocada
             if sucesso:
                 st.success("E-mail enviado! Verifique sua caixa de entrada (e o spam).")
             else:
-                st.error("Falha no envio. Verifique a chave API e o e-mail remetente.")
+                st.error("Falha no envio. Verifique as credenciais do Gmail nos segredos.")
         else:
             st.warning("Você não possui e-mail cadastrado. Cadastre um primeiro.")
 if st.sidebar.button("Sair", key="sair"):
