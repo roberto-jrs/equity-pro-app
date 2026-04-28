@@ -861,100 +861,100 @@ if st.session_state.alertas:
                 disparar = True
             
             if disparar:
-                # Notificação visual
                 msg = f"ALERTA: {alerta['ticker']} está ${preco_atual:.2f} ({alerta['direcao']} de ${alerta['preco']})"
                 st.toast(f"🔔 {msg}", icon="⚠️")
                 
-                # Envio de e-mail via Gmail (apenas se o usuário tiver e-mail cadastrado)
+                # Envio de e-mail via Gmail
                 if usuario_logado.get('email'):
                     from email_utils import enviar_email_gmail
-                    assunto = f"🔔 Alerta Equity Pro - {alerta['ticker']}"
-                    # Obtém o texto traduzido para "acima" ou "abaixo"
-if alerta["direcao"] == "above":
-    texto_direcao = t["acima"]
-else:
-    texto_direcao = t["abaixo"]
-
-corpo_html = f"""
-<html>
-<head>
-    <style>
-        body {{
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-        }}
-        .container {{
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #f9f9f9;
-        }}
-        .header {{
-            text-align: center;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #007bff;
-        }}
-        .content {{
-            padding: 20px 0;
-        }}
-        .price {{
-            font-size: 28px;
-            font-weight: bold;
-            color: #007bff;
-        }}
-        .alert-detail {{
-            background-color: #fff3cd;
-            padding: 10px;
-            border-left: 4px solid #ffc107;
-            margin: 15px 0;
-        }}
-        .footer {{
-            font-size: 12px;
-            color: #777;
-            text-align: center;
-            margin-top: 20px;
-            border-top: 1px solid #ddd;
-            padding-top: 10px;
-        }}
-        .button {{
-            display: inline-block;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            margin-top: 15px;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>🔔 {t['alertas_titulo']} - Equity Pro</h2>
-        </div>
-        <div class="content">
-            <p>Olá <strong>{usuario_logado['nome']}</strong>,</p>
-            <p>O ativo <strong>{alerta['ticker']}</strong> {t['acima_abaixo'].lower()} do preço configurado no seu alerta:</p>
-            <div class="alert-detail">
-                <p><strong>Preço atual:</strong> <span class="price">${preco_atual:.2f}</span></p>
-                <p><strong>Condição:</strong> Preço {texto_direcao} de <strong>${alerta['preco']:.2f}</strong></p>
-            </div>
-            <p>Acesse o Equity Pro para ver mais detalhes e tomar sua decisão de investimento.</p>
-            <p style="text-align: center;">
-                <a href="https://equityproapp-jrsiqueira.streamlit.app" class="button">Acessar Painel</a>
-            </p>
-        </div>
-        <div class="footer">
-            <p>Este é um e-mail automático do Equity Pro. Por favor, não responda.</p>
-            <p>© 2025 Equity Pro - Análise e Simulação de Investimentos</p>
-        </div>
-    </div>
-</body>
-</html>
-"""
+                    
+                    # Obtém o texto traduzido para a direção do alerta
+                    if alerta["direcao"] == "above":
+                        texto_direcao = t["acima"]
+                    else:
+                        texto_direcao = t["abaixo"]
+                    
+                    assunto = f"🔔 {t['alertas_titulo']} - {alerta['ticker']}"
+                    corpo_html = f"""
+                    <html>
+                    <head>
+                        <style>
+                            body {{
+                                font-family: Arial, sans-serif;
+                                line-height: 1.6;
+                                color: #333;
+                            }}
+                            .container {{
+                                max-width: 600px;
+                                margin: 0 auto;
+                                padding: 20px;
+                                border: 1px solid #ddd;
+                                border-radius: 8px;
+                                background-color: #f9f9f9;
+                            }}
+                            .header {{
+                                text-align: center;
+                                padding-bottom: 10px;
+                                border-bottom: 2px solid #007bff;
+                            }}
+                            .content {{
+                                padding: 20px 0;
+                            }}
+                            .price {{
+                                font-size: 28px;
+                                font-weight: bold;
+                                color: #007bff;
+                            }}
+                            .alert-detail {{
+                                background-color: #fff3cd;
+                                padding: 10px;
+                                border-left: 4px solid #ffc107;
+                                margin: 15px 0;
+                            }}
+                            .footer {{
+                                font-size: 12px;
+                                color: #777;
+                                text-align: center;
+                                margin-top: 20px;
+                                border-top: 1px solid #ddd;
+                                padding-top: 10px;
+                            }}
+                            .button {{
+                                display: inline-block;
+                                background-color: #007bff;
+                                color: white;
+                                text-decoration: none;
+                                padding: 10px 20px;
+                                border-radius: 5px;
+                                margin-top: 15px;
+                            }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <div class="header">
+                                <h2>🔔 {t['alertas_titulo']} - Equity Pro</h2>
+                            </div>
+                            <div class="content">
+                                <p>Olá <strong>{usuario_logado['nome']}</strong>,</p>
+                                <p>O ativo <strong>{alerta['ticker']}</strong> {t['acima_abaixo'].lower()} do preço configurado no seu alerta:</p>
+                                <div class="alert-detail">
+                                    <p><strong>Preço atual:</strong> <span class="price">${preco_atual:.2f}</span></p>
+                                    <p><strong>Condição:</strong> Preço {texto_direcao} de <strong>${alerta['preco']:.2f}</strong></p>
+                                </div>
+                                <p>Acesse o Equity Pro para ver mais detalhes e tomar sua decisão de investimento.</p>
+                                <p style="text-align: center;">
+                                    <a href="https://equityproapp-jrsiqueira.streamlit.app" class="button">Acessar Painel</a>
+                                </p>
+                            </div>
+                            <div class="footer">
+                                <p>Este é um e-mail automático do Equity Pro. Por favor, não responda.</p>
+                                <p>© 2025 Equity Pro - Análise e Simulação de Investimentos</p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    """
                     enviar_email_gmail(usuario_logado['email'], usuario_logado['nome'], assunto, corpo_html)
                 else:
                     st.warning("Usuário não possui e-mail cadastrado. Alerta não enviado.")
