@@ -857,9 +857,22 @@ if st.session_state.alertas:
             if disparar:
                 msg = f"ALERTA: {alerta['ticker']} está ${preco_atual:.2f} ({alerta['direcao']} de ${alerta['preco']})"
                 st.toast(f"🔔 {msg}", icon="⚠️")
-                # Enviar e-mail se configurado
-                if st.session_state.email_config['enabled']:
-                    send_email_alert(f"Alerta Equity Pro - {alerta['ticker']}", msg, st.session_state.email_config)
+                # Enviar e-mail via Brevo usando o e-mail do usuário logado
+            if usuario_logado.get('email'):
+                assunto = f"🔔 Alerta Equity Pro - {alerta['ticker']}"
+                corpo_html = f"""
+                <html>
+                <body>
+                <h2>Alerta de Preço</h2>
+                <p><strong>{alerta['ticker']}</strong> está em <strong>${preco_atual:.2f}</strong></p>
+                <p>Condição: {alerta['direcao']} de ${alerta['preco']:.2f}</p>
+                <p>Esta é uma notificação automática do Equity Pro.</p>
+                </body>
+                </html>
+                """
+                enviar_email_brevo(usuario_logado['email'], usuario_logado['nome'], assunto, corpo_html)
+            else:
+                st.warning("Usuário não possui e-mail cadastrado. Alerta não enviado.")
                 # Marcar como disparado para não repetir
                 alerta["disparado"] = True
 
