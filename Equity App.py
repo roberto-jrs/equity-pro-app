@@ -15,6 +15,7 @@ from email.mime.multipart import MIMEMultipart
 from database import cadastrar_usuario, verificar_login, salvar_preferencias, buscar_usuario_por_username
 import hashlib
 import time
+from email_utils import enviar_email_brevo
 
 # Gera um token único para o usuário
 def gerar_token(username):
