@@ -871,7 +871,7 @@ if 'backtest_result' in st.session_state:
     st.plotly_chart(fig_bt, use_container_width=True)
 
 # ===================================================================
-# 15. ALERTAS (com e-mail)
+# 15. ALERTAS (com e-mail via Gmail)
 # ===================================================================
 if st.session_state.alertas:
     for alerta in st.session_state.alertas:
@@ -882,26 +882,33 @@ if st.session_state.alertas:
                 disparar = True
             elif alerta["direcao"] == "below" and preco_atual <= alerta["preco"] and not alerta.get("disparado", False):
                 disparar = True
+            
             if disparar:
+                # Notificação visual
                 msg = f"ALERTA: {alerta['ticker']} está ${preco_atual:.2f} ({alerta['direcao']} de ${alerta['preco']})"
                 st.toast(f"🔔 {msg}", icon="⚠️")
-                # Enviar e-mail via Brevo usando o e-mail do usuário logado
-            if usuario_logado.get('email'):
-                assunto = f"🔔 Alerta Equity Pro - {alerta['ticker']}"
-                corpo_html = f"""
-                <html>
-                <body>
-                <h2>Alerta de Preço</h2>
-                <p><strong>{alerta['ticker']}</strong> está em <strong>${preco_atual:.2f}</strong></p>
-                <p>Condição: {alerta['direcao']} de ${alerta['preco']:.2f}</p>
-                <p>Esta é uma notificação automática do Equity Pro.</p>
-                </body>
-                </html>
-                """
-                enviar_email_brevo(usuario_logado['email'], usuario_logado['nome'], assunto, corpo_html)
-            else:
-                st.warning("Usuário não possui e-mail cadastrado. Alerta não enviado.")
-                # Marcar como disparado para não repetir
+                
+                # Envio de e-mail via Gmail (apenas se o usuário tiver e-mail cadastrado)
+                if usuario_logado.get('email'):
+                    from email_utils import enviar_email_gmail
+                    assunto = f"🔔 Alerta Equity Pro - {alerta['ticker']}"
+                    corpo_html = f"""
+                    <html>
+                    <body>
+                        <h2>Alerta de Preço</h2>
+                        <p><strong>{alerta['ticker']}</strong> está em <strong>${preco_atual:.2f}</strong></p>
+                        <p>Condição: {alerta['direcao']} de ${alerta['preco']:.2f}</p>
+                        <p>Esta é uma notificação automática do Equity Pro.</p>
+                        <hr>
+                        <small>Equity Pro - Análise e Simulação</small>
+                    </body>
+                    </html>
+                    """
+                    enviar_email_gmail(usuario_logado['email'], usuario_logado['nome'], assunto, corpo_html)
+                else:
+                    st.warning("Usuário não possui e-mail cadastrado. Alerta não enviado.")
+                
+                # Marca como disparado para não repetir na mesma sessão
                 alerta["disparado"] = True
 
 # ===================================================================
