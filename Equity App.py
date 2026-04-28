@@ -874,7 +874,7 @@ if st.session_state.alertas:
                     else:
                         texto_direcao = t["abaixo"]
                     
-                    assunto = f"🔔 {t['alertas_titulo']} - {alerta['ticker']}"
+                    assunto = f" {t['alertas_titulo']} - {alerta['ticker']}"
                     corpo_html = f"""
                     <html>
                     <head>
@@ -933,7 +933,7 @@ if st.session_state.alertas:
                     <body>
                         <div class="container">
                             <div class="header">
-                                <h2>🔔 {t['alertas_titulo']} - Equity Pro</h2>
+                                <h2> {t['alertas_titulo']} - Equity Pro</h2>
                             </div>
                             <div class="content">
                                 <p>Olá <strong>{usuario_logado['nome']}</strong>,</p>
