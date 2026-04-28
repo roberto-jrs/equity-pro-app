@@ -1,29 +1,34 @@
 import streamlit as st
-import sib_api_v3_sdk
-from sib_api_v3_sdk.rest import ApiException
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-def enviar_email_brevo(destino_email, nome_destino, assunto, mensagem_html):
+def enviar_email_gmail(destino_email, nome_destino, assunto, mensagem_html):
     """
-    Envia e-mail usando a API do Brevo (Sendinblue).
+    Envia e-mail usando servidor SMTP do Gmail.
+    O remetente e a senha são lidos dos segredos.
     """
     try:
-        # Configuração da API com a chave armazenada nos segredos
-        configuration = sib_api_v3_sdk.Configuration()
-        configuration.api_key['api-key'] = st.secrets["BREVO_API_KEY"]
+        remetente = st.secrets["GMAIL_USER"]
+        senha_app = st.secrets["GMAIL_PASSWORD"]
         
-        api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
+        # Monta a mensagem
+        msg = MIMEMultipart()
+        msg['From'] = remetente
+        msg['To'] = destino_email
+        msg['Subject'] = assunto
         
-        # Monta o e-mail
-        email = sib_api_v3_sdk.SendSmtpEmail(
-            to=[{"email": destino_email, "name": nome_destino}],
-            sender={"email": "equity.pro.jr@gmail.com", "name": "Equity Pro"},
-            subject=assunto,
-            html_content=mensagem_html
-        )
+        # Anexa o corpo HTML
+        msg.attach(MIMEText(mensagem_html, 'html'))
         
-        # Envia
-        api_instance.send_transac_email(email)
+        # Conecta ao servidor Gmail e envia
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(remetente, senha_app)
+            server.send_message(msg)
+        
+        print(f"E-mail enviado para {destino_email}")
         return True
-    except ApiException as e:
-        print(f"Erro ao enviar e-mail via Brevo: {e}")
+    except Exception as e:
+        print(f"Erro ao enviar e-mail: {e}")
         return False
