@@ -869,7 +869,13 @@ if st.session_state.alertas:
                 if usuario_logado.get('email'):
                     from email_utils import enviar_email_gmail
                     assunto = f"🔔 Alerta Equity Pro - {alerta['ticker']}"
-                    corpo_html = f"""
+                    # Obtém o texto traduzido para "acima" ou "abaixo"
+if alerta["direcao"] == "above":
+    texto_direcao = t["acima"]
+else:
+    texto_direcao = t["abaixo"]
+
+corpo_html = f"""
 <html>
 <head>
     <style>
@@ -927,14 +933,14 @@ if st.session_state.alertas:
 <body>
     <div class="container">
         <div class="header">
-            <h2>🔔 Alerta de Preço - Equity Pro</h2>
+            <h2>🔔 {t['alertas_titulo']} - Equity Pro</h2>
         </div>
         <div class="content">
             <p>Olá <strong>{usuario_logado['nome']}</strong>,</p>
-            <p>O ativo <strong>{alerta['ticker']}</strong> atingiu o preço configurado no seu alerta:</p>
+            <p>O ativo <strong>{alerta['ticker']}</strong> {t['acima_abaixo'].lower()} do preço configurado no seu alerta:</p>
             <div class="alert-detail">
                 <p><strong>Preço atual:</strong> <span class="price">${preco_atual:.2f}</span></p>
-                <p><strong>Condição:</strong> Preço {alerta['direcao']} de <strong>${alerta['preco']:.2f}</strong></p>
+                <p><strong>Condição:</strong> Preço {texto_direcao} de <strong>${alerta['preco']:.2f}</strong></p>
             </div>
             <p>Acesse o Equity Pro para ver mais detalhes e tomar sua decisão de investimento.</p>
             <p style="text-align: center;">
