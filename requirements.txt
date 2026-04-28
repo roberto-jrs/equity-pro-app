@@ -7,3 +7,4 @@ plotly
 streamlit-autorefresh
 numpy==1.26.3
 streamlit-authenticator
+brevo-python
