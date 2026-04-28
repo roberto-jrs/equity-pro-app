@@ -260,16 +260,6 @@ if 'meus_ativos' not in st.session_state:
         {"ticker": "BTC-USD", "nome": "Bitcoin", "setor": "Cripto", "moeda_base": "USD"},
         {"ticker": "ETH-USD", "nome": "Ethereum", "setor": "Cripto", "moeda_base": "USD"}
     ]
-# Configurações de e-mail (inicialmente vazias)
-if 'email_config' not in st.session_state:
-    st.session_state.email_config = {
-        "smtp_server": "",
-        "smtp_port": 587,
-        "email_from": "",
-        "email_password": "",
-        "email_to": "",
-        "enabled": False
-    }
 
 # ===================================================================
 # 5. TRADUÇÃO (expandida para novos textos)
@@ -562,19 +552,6 @@ with st.sidebar:
         if st.button("🗑️ Limpar todos"):
             st.session_state.alertas = []
             st.rerun()
-
-    st.divider()
-    st.header(t["email_config"])
-    with st.expander("Configurar e-mail"):
-        st.session_state.email_config['enabled'] = st.checkbox(t["enable_email"], value=st.session_state.email_config['enabled'])
-        st.session_state.email_config['smtp_server'] = st.text_input(t["smtp_server"], value=st.session_state.email_config['smtp_server'])
-        st.session_state.email_config['smtp_port'] = st.number_input(t["smtp_port"], value=st.session_state.email_config['smtp_port'], step=1)
-        st.session_state.email_config['email_from'] = st.text_input(t["email_from"], value=st.session_state.email_config['email_from'])
-        st.session_state.email_config['email_password'] = st.text_input(t["email_password"], type="password", value=st.session_state.email_config['email_password'])
-        st.session_state.email_config['email_to'] = st.text_input(t["email_to"], value=st.session_state.email_config['email_to'])
-        if st.button("Testar e-mail"):
-            send_email_alert("Teste Equity Pro", "Configuração de e-mail funcionando!", st.session_state.email_config)
-            st.success("Teste enviado (se configurado corretamente)")
 
     st.divider()
     st.header("📊 " + t["backtest_titulo"])
