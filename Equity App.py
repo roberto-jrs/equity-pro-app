@@ -991,8 +991,8 @@ if st.session_state.alertas:
                 texto_direcao = t["acima"] if alerta["direcao"] == "above" else t["abaixo"]
 
                 assunto = f"🔔 {t['alertas_titulo']} - {alerta['ticker']}"
-
-                corpo_html = f"""
+                
+               corpo_html = f"""
                 <html>
                 <head>
                     <style>
@@ -1011,20 +1011,20 @@ if st.session_state.alertas:
                             <h2>🔔 {t['alertas_titulo']} - Equity Pro</h2>
                         </div>
                         <div class="content">
-                            <p>{t.get('ola', 'Olá')} <strong>{usuario_logado['nome']}</strong>,</p>
-                            <p>O ativo <strong>{alerta['ticker']}</strong> {t.get('email_alert_desc2', 'atingiu o preço configurado')}:</p>
+                            <p>{t['ola']} <strong>{usuario_logado['nome']}</strong>,</p>
+                            <p>{t['email_alert_desc1']} <strong>{alerta['ticker']}</strong> {t['email_alert_desc2']}:</p>
                             <div class="alert-detail">
-                                <p><strong>{t.get('preco_atual', 'Preço atual')}:</strong> <span class="price">{simbolo} {preco_atual_conv:,.2f}</span></p>
-                                <p><strong>{t.get('condicao', 'Condição')}:</strong> Preço {texto_direcao} <strong>{simbolo} {preco_alvo_conv:,.2f}</strong></p>
+                                <p><strong>{t['preco_atual']}:</strong> <span class="price">{simbolo} {preco_atual_conv:,.2f}</span></p>
+                                <p><strong>{t['condicao']}:</strong> {t['preco']} {texto_direcao} <strong>{simbolo} {preco_alvo_conv:,.2f}</strong></p>
                             </div>
-                            <p>{t.get('email_alert_cta', 'Acesse o Equity Pro para ver mais detalhes e tomar sua decisão de investimento.')}</p>
+                            <p>{t['email_alert_cta']}</p>
                             <p style="text-align: center;">
-                                <a href="https://equityproapp-jrsiqueira.streamlit.app" class="button">{t.get('acessar_painel', 'Acessar Painel')}</a>
+                                <a href="https://equityproapp-jrsiqueira.streamlit.app" class="button">{t['acessar_painel']}</a>
                             </p>
                         </div>
                         <div class="footer">
-                            <p>{t.get('email_footer', 'Este é um e-mail automático do Equity Pro. Por favor, não responda.')}</p>
-                            <p>© 2025 Equity Pro - {t.get('subtitulo', 'Análise e Simulação de Investimentos')}</p>
+                            <p>{t['email_footer']}</p>
+                            <p>© 2025 Equity Pro - {t['subtitulo']}</p>
                         </div>
                     </div>
                 </body>
