@@ -571,7 +571,7 @@ with st.sidebar:
     
     st.divider()
     st.header("🔔 " + t["alertas_titulo"])
-    with st.expander(t["criar_alerta"]):
+    with st.expander(t["criar_alerta"], expanded=True):
         col_a1, col_a2 = st.columns(2)
         with col_a1:
             ticker_alerta = st.text_input(t["ticker_alerta"], key="alert_ticker")
