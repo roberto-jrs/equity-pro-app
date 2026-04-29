@@ -570,8 +570,10 @@ with st.sidebar:
                 st.rerun()
     
     st.divider()
-    st.header("🔔 " + t["alertas_titulo"])
-    st.subheader("➕ " + t["criar_alerta"])
+st.header("🔔 " + t["alertas_titulo"])
+
+# Criação do alerta (sempre visível)
+st.subheader("➕ " + t["criar_alerta"])
 col_a1, col_a2 = st.columns(2)
 with col_a1:
     ticker_alerta = st.text_input(t["ticker_alerta"], key="alert_ticker")
@@ -579,71 +581,70 @@ with col_a2:
     preco_alerta = st.number_input(t["preco_alerta"], min_value=0.0, step=1.0, key="alert_price")
 direcao = st.radio(t["acima_abaixo"], [t["acima"], t["abaixo"]], horizontal=True)
 
-    if st.button("➕ " + t["criar_alerta"], key="criar_alerta_btn"):
-        if ticker_alerta and preco_alerta > 0:
-            ticker = ticker_alerta.upper()
-            moeda_base = get_moeda_base(ticker)
-            brl_rate, eur_rate = get_rates()
-            moeda_usuario = st.session_state.moeda_save
-
-            # Converte o preço digitado para a moeda original do ativo
-            if moeda_usuario == "USD ($)":
-                preco_original = preco_alerta * brl_rate if moeda_base == "BRL" else preco_alerta
-            elif moeda_usuario == "BRL (R$)":
-                preco_original = preco_alerta / brl_rate if moeda_base == "USD" else preco_alerta
-            else:  # EUR
-                if moeda_base == "USD":
-                    preco_original = preco_alerta / eur_rate
-                elif moeda_base == "BRL":
-                    preco_original = (preco_alerta / eur_rate) * brl_rate
-                else:
-                    preco_original = preco_alerta
-
-            direcao_sql = "above" if direcao == t["acima"] else "below"
-            # Salva no banco
-            criar_alerta(usuario_logado['id'], ticker, preco_original, direcao_sql)
-
-            # Recarrega a lista de alertas do banco
-            alertas_db = listar_alertas_usuario(usuario_logado['id'])
-            st.session_state.alertas = []
-            for alerta_db in alertas_db:
-                aid, aticker, apreco, adir = alerta_db
-                amoeda_base = get_moeda_base(aticker)
-                st.session_state.alertas.append({
-                    "id": aid,
-                    "ticker": aticker,
-                    "preco_original": apreco,
-                    "moeda_base": amoeda_base,
-                    "direcao": adir,
-                    "disparado": False
-                })
-            st.success(f"Alerta criado para {ticker}")
-            st.rerun()
-        else:
-            st.error("Preencha ticker e preço válido.")
-
-    # Exibição dos alertas ativos (fora do botão)
-    if st.session_state.alertas:
-        st.write("**Alertas ativos:**")
+if st.button("➕ " + t["criar_alerta"], key="criar_alerta_btn"):
+    if ticker_alerta and preco_alerta > 0:
+        ticker = ticker_alerta.upper()
+        moeda_base = get_moeda_base(ticker)
         brl_rate, eur_rate = get_rates()
-        for i, alert in enumerate(st.session_state.alertas):
-            preco_visual, simbolo = converter_preco(
-                alert["preco_original"],
-                alert["moeda_base"],
-                st.session_state.moeda_save,
-                brl_rate,
-                eur_rate
-            )
-            st.caption(
-                f"{alert['ticker']} - {'acima' if alert['direcao']=='above' else 'abaixo'} "
-                f"{simbolo} {preco_visual:,.2f}"
-            )
-        if st.button("🗑️ Limpar todos", key="limpar_todos_alertas"):
-            for alert in st.session_state.alertas:
-                if alert.get("id"):
-                    desativar_alerta(alert["id"])
-            st.session_state.alertas = []
-            st.rerun()
+        moeda_usuario = st.session_state.moeda_save
+
+        # Converte o preço digitado para a moeda original do ativo
+        if moeda_usuario == "USD ($)":
+            preco_original = preco_alerta * brl_rate if moeda_base == "BRL" else preco_alerta
+        elif moeda_usuario == "BRL (R$)":
+            preco_original = preco_alerta / brl_rate if moeda_base == "USD" else preco_alerta
+        else:  # EUR
+            if moeda_base == "USD":
+                preco_original = preco_alerta / eur_rate
+            elif moeda_base == "BRL":
+                preco_original = (preco_alerta / eur_rate) * brl_rate
+            else:
+                preco_original = preco_alerta
+
+        direcao_sql = "above" if direcao == t["acima"] else "below"
+        criar_alerta(usuario_logado['id'], ticker, preco_original, direcao_sql)
+
+        # Recarrega alertas do banco e atualiza session_state
+        alertas_db = listar_alertas_usuario(usuario_logado['id'])
+        st.session_state.alertas = []
+        for alerta_db in alertas_db:
+            aid, aticker, apreco, adir = alerta_db
+            amoeda_base = get_moeda_base(aticker)
+            st.session_state.alertas.append({
+                "id": aid,
+                "ticker": aticker,
+                "preco_original": apreco,
+                "moeda_base": amoeda_base,
+                "direcao": adir,
+                "disparado": False
+            })
+        st.success(f"Alerta criado para {ticker}")
+        st.rerun()
+    else:
+        st.error("Preencha ticker e preço válido.")
+
+# Exibição dos alertas ativos
+if st.session_state.alertas:
+    st.write("**Alertas ativos:**")
+    brl_rate, eur_rate = get_rates()
+    for i, alert in enumerate(st.session_state.alertas):
+        preco_visual, simbolo = converter_preco(
+            alert["preco_original"],
+            alert["moeda_base"],
+            st.session_state.moeda_save,
+            brl_rate,
+            eur_rate
+        )
+        st.caption(
+            f"{alert['ticker']} - {'acima' if alert['direcao']=='above' else 'abaixo'} "
+            f"{simbolo} {preco_visual:,.2f}"
+        )
+    if st.button("🗑️ Limpar todos", key="limpar_todos_alertas"):
+        for alert in st.session_state.alertas:
+            if alert.get("id"):
+                desativar_alerta(alert["id"])
+        st.session_state.alertas = []
+        st.rerun()
 
     st.divider()
     st.header("📊 " + t["backtest_titulo"])
