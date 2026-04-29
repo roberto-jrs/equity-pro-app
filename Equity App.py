@@ -571,15 +571,15 @@ with st.sidebar:
     
     st.divider()
     st.header("🔔 " + t["alertas_titulo"])
-    with st.expander(t["criar_alerta"], expanded=True):
-        col_a1, col_a2 = st.columns(2)
-        with col_a1:
-            ticker_alerta = st.text_input(t["ticker_alerta"], key="alert_ticker")
-        with col_a2:
-            preco_alerta = st.number_input(t["preco_alerta"], min_value=0.0, step=1.0, key="alert_price")
-        direcao = st.radio(t["acima_abaixo"], [t["acima"], t["abaixo"]], horizontal=True)
+    st.subheader("➕ " + t["criar_alerta"])
+col_a1, col_a2 = st.columns(2)
+with col_a1:
+    ticker_alerta = st.text_input(t["ticker_alerta"], key="alert_ticker")
+with col_a2:
+    preco_alerta = st.number_input(t["preco_alerta"], min_value=0.0, step=1.0, key="alert_price")
+direcao = st.radio(t["acima_abaixo"], [t["acima"], t["abaixo"]], horizontal=True)
 
-    if st.button("➕ " + t["criar_alerta"]):
+    if st.button("➕ " + t["criar_alerta"]), key="criar_alerta_btn"):
         if ticker_alerta and preco_alerta > 0:
             ticker = ticker_alerta.upper()
             moeda_base = get_moeda_base(ticker)
