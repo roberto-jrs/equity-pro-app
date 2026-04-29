@@ -992,7 +992,7 @@ if st.session_state.alertas:
 
                 assunto = f"🔔 {t['alertas_titulo']} - {alerta['ticker']}"
                 
-               corpo_html = f"""
+                corpo_html = f"""
                 <html>
                 <head>
                     <style>
