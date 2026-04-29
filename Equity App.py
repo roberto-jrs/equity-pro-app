@@ -579,7 +579,7 @@ with col_a2:
     preco_alerta = st.number_input(t["preco_alerta"], min_value=0.0, step=1.0, key="alert_price")
 direcao = st.radio(t["acima_abaixo"], [t["acima"], t["abaixo"]], horizontal=True)
 
-    if st.button("➕ " + t["criar_alerta"]), key="criar_alerta_btn"):
+    if st.button("➕ " + t["criar_alerta"], key="criar_alerta_btn"):
         if ticker_alerta and preco_alerta > 0:
             ticker = ticker_alerta.upper()
             moeda_base = get_moeda_base(ticker)
