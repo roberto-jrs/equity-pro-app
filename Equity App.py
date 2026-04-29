@@ -13,6 +13,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from database import cadastrar_usuario, verificar_login, salvar_preferencias, buscar_usuario_por_username
+from database import criar_alerta, listar_alertas_usuario, desativar_alerta
 from email_utils import enviar_email_gmail
 import hashlib
 import time
