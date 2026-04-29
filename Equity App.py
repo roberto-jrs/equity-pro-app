@@ -570,7 +570,7 @@ with st.sidebar:
                 st.rerun()
     
     st.divider()
-    st.header("🔔" + t["alertas_titulo"])
+    st.header("" + t["alertas_titulo"])
 
     # Criação de alerta (sempre visível)
     st.subheader("➕ " + t["criar_alerta"])
