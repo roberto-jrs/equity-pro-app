@@ -1032,6 +1032,11 @@ if st.session_state.alertas:
             else:
                 st.warning("Usuário não possui e-mail cadastrado. Alerta não enviado.")
 
+            # Desativa o alerta no banco de dados (para não reenviar e-mail na próxima verificação)
+            if alerta.get("id"):
+                from database import desativar_alerta
+                desativar_alerta(alerta["id"])
+
             # Marca como disparado
             alerta["disparado"] = True
 
