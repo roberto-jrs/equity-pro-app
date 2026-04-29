@@ -393,7 +393,7 @@ def mudar_idioma():
     st.session_state.sel_idioma = st.session_state.idioma_temp
 
 # ===================================================================
-# 6. FUNÇÕES AUXILIARES
+# 6. FUNÇÕES AUXILIARES 
 # ===================================================================
 @st.cache_data(ttl=3600)
 def get_rates():
@@ -482,7 +482,7 @@ def executar_backtest(ticker, data_inicio, data_fim, short_ma=20, long_ma=50):
     return df, total_return
 
 def send_email_alert(subject, body, config):
-    """Envia e-mail usando configuração SMTP"""
+    """Envia e-mail usando configuração SMTP (não utilizado atualmente)"""
     if not config['enabled']:
         return
     try:
