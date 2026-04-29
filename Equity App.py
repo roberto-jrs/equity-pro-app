@@ -305,7 +305,7 @@ idiomas = {
         "smtp_port": "Port", "email_from": "From Email", "email_password": "Password (app password)",
         "email_to": "To Email", "enable_email": "Enable email alerts",
         "performance_sim": "📈 Simulated Performance", "periodo_graf": "Chart Period",
-        "intervalo_graf": "Interval", "gerar_relatorio": "📄 Generate Report"
+        "intervalo_graf": "Interval", "gerar_relatorio": "📄 Generate Report",
         "ola": "Hello",
         "email_alert_desc1": "The asset",
         "email_alert_desc2": "has reached the configured price",
