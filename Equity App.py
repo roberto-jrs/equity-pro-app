@@ -573,7 +573,7 @@ with st.sidebar:
     st.header("" + t["alertas_titulo"])
 
     # Criação de alerta (sempre visível)
-    st.subheader("➕ " + t["criar_alerta"])
+    st.subheader("" + t["criar_alerta"])
     col_a1, col_a2 = st.columns(2)
     with col_a1:
         ticker_alerta = st.text_input(t["ticker_alerta"], key="alert_ticker")
