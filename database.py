@@ -87,3 +87,34 @@ def buscar_usuario_por_username(username):
         if row:
             return {"id": row[0], "username": row[1], "nome": row[2], "email": row[3], "telefone": row[4]}
     return None
+
+# ================== FUNÇÕES PARA ALERTAS ==================
+def criar_alerta(usuario_id, ticker, preco_alvo, direcao):
+    """Insere um novo alerta no banco de dados."""
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO alertas (usuario_id, ticker, preco_alvo, direcao, ativo) VALUES (?, ?, ?, ?, 1)",
+            (usuario_id, ticker.upper(), preco_alvo, direcao)
+        )
+        conn.commit()
+
+def listar_alertas_usuario(usuario_id):
+    """Retorna todos os alertas ativos de um usuário (com id, ticker, preco_alvo, direcao)."""
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "SELECT id, ticker, preco_alvo, direcao FROM alertas WHERE usuario_id = ? AND ativo = 1",
+            (usuario_id,)
+        )
+        return cursor.fetchall()  # lista de (id, ticker, preco_alvo, direcao)
+
+def desativar_alerta(alerta_id):
+    """Desativa um alerta (não o exclui, apenas marca como inativo)."""
+    with get_connection() as conn:
+        conn.execute("UPDATE alertas SET ativo = 0 WHERE id = ?", (alerta_id,))
+        conn.commit()
+
+def registrar_disparo_alerta(alerta_id):
+    """Registra a data/hora do último disparo do alerta."""
+    with get_connection() as conn:
+        conn.execute("UPDATE alertas SET ultimo_disparo = CURRENT_TIMESTAMP WHERE id = ?", (alerta_id,))
+        conn.commit()
