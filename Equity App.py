@@ -561,24 +561,59 @@ with st.sidebar:
         with col_a2:
             preco_alerta = st.number_input(t["preco_alerta"], min_value=0.0, step=1.0, key="alert_price")
         direcao = st.radio(t["acima_abaixo"], [t["acima"], t["abaixo"]], horizontal=True)
-        if st.button("➕ " + t["criar_alerta"]):
-            if ticker_alerta and preco_alerta > 0:
-                st.session_state.alertas.append({
-                    "ticker": ticker_alerta.upper(),
-                    "preco": preco_alerta,
-                    "direcao": "above" if direcao == t["acima"] else "below",
-                    "disparado": False
-                })
-                st.success(f"Alerta criado para {ticker_alerta.upper()}")
+       if st.button("➕ " + t["criar_alerta"]):
+    if ticker_alerta and preco_alerta > 0:
+        ticker = ticker_alerta.upper()
+        # Descobre a moeda original do ativo (USD ou BRL)
+        moeda_base = get_moeda_base(ticker)
+        # Taxas de câmbio atuais
+        brl_rate, eur_rate = get_rates()
+        # Moeda que o usuário está usando neste momento
+        moeda_usuario = st.session_state.moeda_save
+        
+        # Converte o preço digitado para a moeda original do ativo
+        if moeda_usuario == "USD ($)":
+            preco_original = preco_alerta * brl_rate if moeda_base == "BRL" else preco_alerta
+        elif moeda_usuario == "BRL (R$)":
+            preco_original = preco_alerta / brl_rate if moeda_base == "USD" else preco_alerta
+        else:  # EUR (€)
+            if moeda_base == "USD":
+                preco_original = preco_alerta / eur_rate
+            elif moeda_base == "BRL":
+                preco_original = (preco_alerta / eur_rate) * brl_rate
             else:
-                st.error("Preencha ticker e preço válido.")
+                preco_original = preco_alerta
+        
+        # Armazena o alerta com o preço na moeda original
+        st.session_state.alertas.append({
+            "ticker": ticker,
+            "preco_original": preco_original,
+            "moeda_base": moeda_base,
+            "direcao": "above" if direcao == t["acima"] else "below",
+            "disparado": False
+        })
+        st.success(f"Alerta criado para {ticker}")
+    else:
+        st.error("Preencha ticker e preço válido.")
     if st.session_state.alertas:
-        st.write("**Alertas ativos:**")
-        for i, alert in enumerate(st.session_state.alertas):
-            st.caption(f"{alert['ticker']} - {'acima' if alert['direcao']=='above' else 'abaixo'} ${alert['preco']:.2f}")
-        if st.button("🗑️ Limpar todos"):
-            st.session_state.alertas = []
-            st.rerun()
+    st.write("**Alertas ativos:**")
+    brl_rate, eur_rate = get_rates()
+    for i, alert in enumerate(st.session_state.alertas):
+        # Converte o preço original (na moeda base) para a moeda atual do usuário
+        preco_visual, simbolo = converter_preco(
+            alert["preco_original"],
+            alert["moeda_base"],
+            st.session_state.moeda_save,
+            brl_rate,
+            eur_rate
+        )
+        st.caption(
+            f"{alert['ticker']} - {'acima' if alert['direcao']=='above' else 'abaixo'} "
+            f"{simbolo} {preco_visual:,.2f}"
+        )
+    if st.button("🗑️ Limpar todos"):
+        st.session_state.alertas = []
+        st.rerun()
 
     st.divider()
     st.header("📊 " + t["backtest_titulo"])
@@ -875,76 +910,102 @@ if 'backtest_result' in st.session_state:
     st.plotly_chart(fig_bt, use_container_width=True)
 
 # ===================================================================
-# 15. ALERTAS (com e-mail via Gmail)
+# 15. ALERTAS (com e-mail via Gmail e conversão de moeda)
 # ===================================================================
 if st.session_state.alertas:
+    brl_rate, eur_rate = get_rates()   # taxas atualizadas
     for alerta in st.session_state.alertas:
-        preco_atual, _ = get_safe_quote(alerta["ticker"])
-        if preco_atual > 0:
-            disparar = False
-            if alerta["direcao"] == "above" and preco_atual >= alerta["preco"] and not alerta.get("disparado", False):
-                disparar = True
-            elif alerta["direcao"] == "below" and preco_atual <= alerta["preco"] and not alerta.get("disparado", False):
-                disparar = True
-            
-            if disparar:
-                msg = f"ALERTA: {alerta['ticker']} está ${preco_atual:.2f} ({alerta['direcao']} de ${alerta['preco']})"
-                st.toast(f"🔔 {msg}", icon="⚠️")
-                
-                # Envio de e-mail via Gmail
-                if usuario_logado.get('email'):
-    from email_utils import enviar_email_gmail
+        if alerta.get("disparado", False):
+            continue
 
-    # Tradução dos textos do e-mail
-    texto_direcao = t["acima"] if alerta["direcao"] == "above" else t["abaixo"]
-    assunto = f"🔔 {t['alertas_titulo']} - {alerta['ticker']}"
-    
-    corpo_html = f"""
-    <html>
-    <head>
-        <style>
-            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }}
-            .header {{ text-align: center; padding-bottom: 10px; border-bottom: 2px solid #007bff; }}
-            .content {{ padding: 20px 0; }}
-            .price {{ font-size: 28px; font-weight: bold; color: #007bff; }}
-            .alert-detail {{ background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 15px 0; }}
-            .footer {{ font-size: 12px; color: #777; text-align: center; margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px; }}
-            .button {{ display: inline-block; background-color: #007bff; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; margin-top: 15px; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h2>🔔 {t['alertas_titulo']} - Equity Pro</h2>
-            </div>
-            <div class="content">
-                <p>{t.get('ola', 'Olá')} <strong>{usuario_logado['nome']}</strong>,</p>
-                <p>{t.get('email_alert_desc1', 'O ativo')} <strong>{alerta['ticker']}</strong> {t.get('email_alert_desc2', 'atingiu o preço configurado')}:</p>
-                <div class="alert-detail">
-                    <p><strong>{t.get('preco_atual', 'Preço atual')}:</strong> <span class="price">${preco_atual:.2f}</span></p>
-                    <p><strong>{t.get('condicao', 'Condição')}:</strong> {t.get('preco', 'Preço')} {texto_direcao} <strong>${alerta['preco']:.2f}</strong></p>
-                </div>
-                <p>{t.get('email_alert_cta', 'Acesse o Equity Pro para ver mais detalhes e tomar sua decisão de investimento.')}</p>
-                <p style="text-align: center;">
-                    <a href="https://equityproapp-jrsiqueira.streamlit.app" class="button">{t.get('acessar_painel', 'Acessar Painel')}</a>
-                </p>
-            </div>
-            <div class="footer">
-                <p>{t.get('email_footer', 'Este é um e-mail automático do Equity Pro. Por favor, não responda.')}</p>
-                <p>© 2025 Equity Pro - {t.get('subtitulo', 'Análise e Simulação de Investimentos')}</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    
-    enviar_email_gmail(usuario_logado['email'], usuario_logado['nome'], assunto, corpo_html)
-                else:
-                    st.warning("Usuário não possui e-mail cadastrado. Alerta não enviado.")
-                
-                # Marca como disparado para não repetir na mesma sessão
-                alerta["disparado"] = True
+        # Preço atual na moeda original do ativo
+        preco_atual, _ = get_safe_quote(alerta["ticker"])
+        if preco_atual <= 0:
+            continue
+
+        # Comparação usando o preço original (armazenado)
+        disparar = False
+        if alerta["direcao"] == "above" and preco_atual >= alerta["preco_original"]:
+            disparar = True
+        elif alerta["direcao"] == "below" and preco_atual <= alerta["preco_original"]:
+            disparar = True
+
+        if disparar:
+            msg = f"ALERTA: {alerta['ticker']} atingiu o preço!"
+            st.toast(f"🔔 {msg}", icon="⚠️")
+
+            # Envio de e-mail usando Gmail
+            if usuario_logado.get('email'):
+                from email_utils import enviar_email_gmail
+
+                # Moeda de exibição atual do usuário
+                moeda_destino = st.session_state.moeda_save
+
+                # Converte preço atual e preço alvo para a moeda de exibição
+                preco_atual_conv, simbolo = converter_preco(
+                    preco_atual,
+                    alerta["moeda_base"],
+                    moeda_destino,
+                    brl_rate,
+                    eur_rate
+                )
+                preco_alvo_conv, _ = converter_preco(
+                    alerta["preco_original"],
+                    alerta["moeda_base"],
+                    moeda_destino,
+                    brl_rate,
+                    eur_rate
+                )
+
+                # Tradução da direção
+                texto_direcao = t["acima"] if alerta["direcao"] == "above" else t["abaixo"]
+
+                assunto = f"🔔 {t['alertas_titulo']} - {alerta['ticker']}"
+
+                corpo_html = f"""
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }}
+                        .header {{ text-align: center; padding-bottom: 10px; border-bottom: 2px solid #007bff; }}
+                        .price {{ font-size: 28px; font-weight: bold; color: #007bff; }}
+                        .alert-detail {{ background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 15px 0; }}
+                        .footer {{ font-size: 12px; color: #777; text-align: center; margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px; }}
+                        .button {{ display: inline-block; background-color: #007bff; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; margin-top: 15px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h2>🔔 {t['alertas_titulo']} - Equity Pro</h2>
+                        </div>
+                        <div class="content">
+                            <p>{t.get('ola', 'Olá')} <strong>{usuario_logado['nome']}</strong>,</p>
+                            <p>O ativo <strong>{alerta['ticker']}</strong> {t.get('email_alert_desc2', 'atingiu o preço configurado')}:</p>
+                            <div class="alert-detail">
+                                <p><strong>{t.get('preco_atual', 'Preço atual')}:</strong> <span class="price">{simbolo} {preco_atual_conv:,.2f}</span></p>
+                                <p><strong>{t.get('condicao', 'Condição')}:</strong> Preço {texto_direcao} <strong>{simbolo} {preco_alvo_conv:,.2f}</strong></p>
+                            </div>
+                            <p>{t.get('email_alert_cta', 'Acesse o Equity Pro para ver mais detalhes e tomar sua decisão de investimento.')}</p>
+                            <p style="text-align: center;">
+                                <a href="https://equityproapp-jrsiqueira.streamlit.app" class="button">{t.get('acessar_painel', 'Acessar Painel')}</a>
+                            </p>
+                        </div>
+                        <div class="footer">
+                            <p>{t.get('email_footer', 'Este é um e-mail automático do Equity Pro. Por favor, não responda.')}</p>
+                            <p>© 2025 Equity Pro - {t.get('subtitulo', 'Análise e Simulação de Investimentos')}</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                enviar_email_gmail(usuario_logado['email'], usuario_logado['nome'], assunto, corpo_html)
+            else:
+                st.warning("Usuário não possui e-mail cadastrado. Alerta não enviado.")
+
+            # Marca como disparado
+            alerta["disparado"] = True
 
 # ===================================================================
 # 16. REFRESH AUTOMÁTICO
