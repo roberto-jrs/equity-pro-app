@@ -44,6 +44,138 @@ def validar_token(token_str, dias_validade=30):
     except:
         pass
     return None
+
+# ===================================================================
+# FUNÇÕES AUXILIARES 
+# ===================================================================
+@st.cache_data(ttl=3600)
+def get_rates():
+    try:
+        usd_brl = yf.Ticker("USDBRL=X").fast_info.get('last_price', 5.15)
+        usd_eur = yf.Ticker("EUR=X").fast_info.get('last_price', 0.92)
+        return usd_brl, usd_eur
+    except:
+        return 5.15, 0.92
+
+def get_moeda_base(ticker):
+    if ticker.endswith(".SA"):
+        return "BRL"
+    if ticker.startswith("BTC-") or ticker.startswith("ETH-"):
+        return "USD"
+    return "USD"
+
+@st.cache_data(ttl=10)
+def get_safe_quote(ticker):
+    try:
+        res = finnhub_client.quote(ticker)
+        price = res.get('c', 0.0)
+        change = res.get('dp', 0.0)
+        if price and price > 0:
+            return price, change
+    except:
+        pass
+    try:
+        yf_ticker = ticker if not (len(ticker) <= 6 and not ticker.endswith(".SA")) else f"{ticker}.SA"
+        data = yf.Ticker(yf_ticker).fast_info
+        price = data.get('last_price', 0.0)
+        return price, 0.0
+    except:
+        return 0.0, 0.0
+
+def check_market_status():
+    ny_now = datetime.now(pytz.timezone('America/New_York'))
+    is_weekday = ny_now.weekday() < 5
+    current_time = ny_now.time()
+    market_open = dt_time(9, 30)
+    market_close = dt_time(16, 0)
+    is_hours = market_open <= current_time < market_close
+    t = idiomas[st.session_state.sel_idioma]
+    if is_weekday and is_hours:
+        return "ON", "#26a69a", t["status_on"]
+    else:
+        return "OFF", "#ef5350", t["status_off"]
+
+def get_now_local():
+    return datetime.now(pytz.utc).astimezone(pytz.timezone(st.session_state.sel_fuso))
+
+def converter_preco(preco_original, moeda_base, moeda_destino, taxa_brl, taxa_eur):
+    if moeda_destino == "USD ($)":
+        if moeda_base == "BRL":
+            return preco_original / taxa_brl, "$"
+        else:
+            return preco_original, "$"
+    elif moeda_destino == "BRL (R$)":
+        if moeda_base == "USD":
+            return preco_original * taxa_brl, "R$"
+        else:
+            return preco_original, "R$"
+    elif moeda_destino == "EUR (€)":
+        if moeda_base == "USD":
+            return preco_original * taxa_eur, "€"
+        elif moeda_base == "BRL":
+            return (preco_original / taxa_brl) * taxa_eur, "€"
+        else:
+            return preco_original, "€"
+    return preco_original, "$"
+
+def executar_backtest(ticker, data_inicio, data_fim, short_ma=20, long_ma=50):
+    df = yf.download(ticker, start=data_inicio, end=data_fim, progress=False)
+    if df.empty:
+        return None, None, None
+    df['MA_short'] = sma(df['Close'], short_ma)
+    df['MA_long'] = sma(df['Close'], long_ma)
+    df['Signal'] = 0
+    df.loc[df['MA_short'] > df['MA_long'], 'Signal'] = 1
+    df.loc[df['MA_short'] <= df['MA_long'], 'Signal'] = -1
+    df['Returns'] = df['Close'].pct_change()
+    df['Strategy_Returns'] = df['Signal'].shift(1) * df['Returns']
+    df['Cumulative_Returns'] = (1 + df['Returns']).cumprod()
+    df['Cumulative_Strategy'] = (1 + df['Strategy_Returns']).cumprod()
+    total_return = df['Cumulative_Strategy'].iloc[-1] - 1 if not df.empty else 0
+    return df, total_return
+
+def send_email_alert(subject, body, config):
+    """Envia e-mail usando configuração SMTP (não utilizado atualmente)"""
+    if not config['enabled']:
+        return
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = config['email_from']
+        msg['To'] = config['email_to']
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+        server = smtplib.SMTP(config['smtp_server'], config['smtp_port'])
+        server.starttls()
+        server.login(config['email_from'], config['email_password'])
+        server.send_message(msg)
+        server.quit()
+    except Exception as e:
+        st.warning(f"Falha ao enviar e-mail: {e}")
+
+def generate_report_html(ticker, nome, price, change, hist, indicadores, capital):
+    """Gera relatório HTML do ativo para download"""
+    html = f"""
+    <html>
+    <head><title>Relatório {ticker}</title>
+    <style>
+        body {{ font-family: Arial; margin: 20px; }}
+        h1 {{ color: #007bff; }}
+        .metric {{ background: #f0f2f6; padding: 10px; border-radius: 5px; margin: 10px 0; }}
+    </style>
+    </head>
+    <body>
+    <h1>Relatório de Análise - {nome} ({ticker})</h1>
+    <div class="metric">
+        <p>Preço atual: ${price:.2f}</p>
+        <p>Variação: {change:.2f}%</p>
+        <p>Capital simulado: ${capital:,.2f}</p>
+    </div>
+    <p>Relatório gerado em: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    <p><em>Gráficos técnicos estão anexados nas imagens ou visualize no app.</em></p>
+    </body>
+    </html>
+    """
+    return html
     
 # ===================================================================
 # 1. CONFIGURAÇÃO DE PÁGINA
@@ -391,138 +523,6 @@ idiomas = {
 
 def mudar_idioma():
     st.session_state.sel_idioma = st.session_state.idioma_temp
-
-# ===================================================================
-# 6. FUNÇÕES AUXILIARES 
-# ===================================================================
-@st.cache_data(ttl=3600)
-def get_rates():
-    try:
-        usd_brl = yf.Ticker("USDBRL=X").fast_info.get('last_price', 5.15)
-        usd_eur = yf.Ticker("EUR=X").fast_info.get('last_price', 0.92)
-        return usd_brl, usd_eur
-    except:
-        return 5.15, 0.92
-
-def get_moeda_base(ticker):
-    if ticker.endswith(".SA"):
-        return "BRL"
-    if ticker.startswith("BTC-") or ticker.startswith("ETH-"):
-        return "USD"
-    return "USD"
-
-@st.cache_data(ttl=10)
-def get_safe_quote(ticker):
-    try:
-        res = finnhub_client.quote(ticker)
-        price = res.get('c', 0.0)
-        change = res.get('dp', 0.0)
-        if price and price > 0:
-            return price, change
-    except:
-        pass
-    try:
-        yf_ticker = ticker if not (len(ticker) <= 6 and not ticker.endswith(".SA")) else f"{ticker}.SA"
-        data = yf.Ticker(yf_ticker).fast_info
-        price = data.get('last_price', 0.0)
-        return price, 0.0
-    except:
-        return 0.0, 0.0
-
-def check_market_status():
-    ny_now = datetime.now(pytz.timezone('America/New_York'))
-    is_weekday = ny_now.weekday() < 5
-    current_time = ny_now.time()
-    market_open = dt_time(9, 30)
-    market_close = dt_time(16, 0)
-    is_hours = market_open <= current_time < market_close
-    t = idiomas[st.session_state.sel_idioma]
-    if is_weekday and is_hours:
-        return "ON", "#26a69a", t["status_on"]
-    else:
-        return "OFF", "#ef5350", t["status_off"]
-
-def get_now_local():
-    return datetime.now(pytz.utc).astimezone(pytz.timezone(st.session_state.sel_fuso))
-
-def converter_preco(preco_original, moeda_base, moeda_destino, taxa_brl, taxa_eur):
-    if moeda_destino == "USD ($)":
-        if moeda_base == "BRL":
-            return preco_original / taxa_brl, "$"
-        else:
-            return preco_original, "$"
-    elif moeda_destino == "BRL (R$)":
-        if moeda_base == "USD":
-            return preco_original * taxa_brl, "R$"
-        else:
-            return preco_original, "R$"
-    elif moeda_destino == "EUR (€)":
-        if moeda_base == "USD":
-            return preco_original * taxa_eur, "€"
-        elif moeda_base == "BRL":
-            return (preco_original / taxa_brl) * taxa_eur, "€"
-        else:
-            return preco_original, "€"
-    return preco_original, "$"
-
-def executar_backtest(ticker, data_inicio, data_fim, short_ma=20, long_ma=50):
-    df = yf.download(ticker, start=data_inicio, end=data_fim, progress=False)
-    if df.empty:
-        return None, None, None
-    df['MA_short'] = sma(df['Close'], short_ma)
-    df['MA_long'] = sma(df['Close'], long_ma)
-    df['Signal'] = 0
-    df.loc[df['MA_short'] > df['MA_long'], 'Signal'] = 1
-    df.loc[df['MA_short'] <= df['MA_long'], 'Signal'] = -1
-    df['Returns'] = df['Close'].pct_change()
-    df['Strategy_Returns'] = df['Signal'].shift(1) * df['Returns']
-    df['Cumulative_Returns'] = (1 + df['Returns']).cumprod()
-    df['Cumulative_Strategy'] = (1 + df['Strategy_Returns']).cumprod()
-    total_return = df['Cumulative_Strategy'].iloc[-1] - 1 if not df.empty else 0
-    return df, total_return
-
-def send_email_alert(subject, body, config):
-    """Envia e-mail usando configuração SMTP (não utilizado atualmente)"""
-    if not config['enabled']:
-        return
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = config['email_from']
-        msg['To'] = config['email_to']
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-        server = smtplib.SMTP(config['smtp_server'], config['smtp_port'])
-        server.starttls()
-        server.login(config['email_from'], config['email_password'])
-        server.send_message(msg)
-        server.quit()
-    except Exception as e:
-        st.warning(f"Falha ao enviar e-mail: {e}")
-
-def generate_report_html(ticker, nome, price, change, hist, indicadores, capital):
-    """Gera relatório HTML do ativo para download"""
-    html = f"""
-    <html>
-    <head><title>Relatório {ticker}</title>
-    <style>
-        body {{ font-family: Arial; margin: 20px; }}
-        h1 {{ color: #007bff; }}
-        .metric {{ background: #f0f2f6; padding: 10px; border-radius: 5px; margin: 10px 0; }}
-    </style>
-    </head>
-    <body>
-    <h1>Relatório de Análise - {nome} ({ticker})</h1>
-    <div class="metric">
-        <p>Preço atual: ${price:.2f}</p>
-        <p>Variação: {change:.2f}%</p>
-        <p>Capital simulado: ${capital:,.2f}</p>
-    </div>
-    <p>Relatório gerado em: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-    <p><em>Gráficos técnicos estão anexados nas imagens ou visualize no app.</em></p>
-    </body>
-    </html>
-    """
-    return html
 
 # ===================================================================
 # 8. SIDEBAR (configurações, gerenciamento de ativos, e-mail)
