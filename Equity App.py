@@ -572,7 +572,7 @@ with st.sidebar:
     st.divider()
 st.header("🔔 " + t["alertas_titulo"])
 
-# Criação do alerta (sempre visível)
+# Título da criação (sempre visível)
 st.subheader("➕ " + t["criar_alerta"])
 col_a1, col_a2 = st.columns(2)
 with col_a1:
@@ -588,12 +588,12 @@ if st.button("➕ " + t["criar_alerta"], key="criar_alerta_btn"):
         brl_rate, eur_rate = get_rates()
         moeda_usuario = st.session_state.moeda_save
 
-        # Converte o preço digitado para a moeda original do ativo
+        # Conversão do preço digitado para a moeda original do ativo
         if moeda_usuario == "USD ($)":
             preco_original = preco_alerta * brl_rate if moeda_base == "BRL" else preco_alerta
         elif moeda_usuario == "BRL (R$)":
             preco_original = preco_alerta / brl_rate if moeda_base == "USD" else preco_alerta
-        else:  # EUR
+        else:
             if moeda_base == "USD":
                 preco_original = preco_alerta / eur_rate
             elif moeda_base == "BRL":
@@ -604,7 +604,7 @@ if st.button("➕ " + t["criar_alerta"], key="criar_alerta_btn"):
         direcao_sql = "above" if direcao == t["acima"] else "below"
         criar_alerta(usuario_logado['id'], ticker, preco_original, direcao_sql)
 
-        # Recarrega alertas do banco e atualiza session_state
+        # Recarrega lista de alertas do banco
         alertas_db = listar_alertas_usuario(usuario_logado['id'])
         st.session_state.alertas = []
         for alerta_db in alertas_db:
@@ -623,7 +623,7 @@ if st.button("➕ " + t["criar_alerta"], key="criar_alerta_btn"):
     else:
         st.error("Preencha ticker e preço válido.")
 
-# Exibição dos alertas ativos
+# Listagem de alertas ativos
 if st.session_state.alertas:
     st.write("**Alertas ativos:**")
     brl_rate, eur_rate = get_rates()
