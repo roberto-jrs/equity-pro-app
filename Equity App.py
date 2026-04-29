@@ -572,7 +572,7 @@ with st.sidebar:
     st.divider()
 st.header("🔔 " + t["alertas_titulo"])
 
-# Título da criação (sempre visível)
+# Criação de alerta (sempre visível)
 st.subheader("➕ " + t["criar_alerta"])
 col_a1, col_a2 = st.columns(2)
 with col_a1:
@@ -588,7 +588,7 @@ if st.button("➕ " + t["criar_alerta"], key="criar_alerta_btn"):
         brl_rate, eur_rate = get_rates()
         moeda_usuario = st.session_state.moeda_save
 
-        # Conversão do preço digitado para a moeda original do ativo
+        # Converte o preço digitado para a moeda original do ativo
         if moeda_usuario == "USD ($)":
             preco_original = preco_alerta * brl_rate if moeda_base == "BRL" else preco_alerta
         elif moeda_usuario == "BRL (R$)":
