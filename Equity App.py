@@ -340,7 +340,7 @@ idiomas = {
         "smtp_port": "Porta", "email_from": "E-mail de envio", "email_password": "Senha (app password)",
         "email_to": "E-mail destino", "enable_email": "Ativar alertas por e-mail",
         "performance_sim": "📈 Performance Simulada", "periodo_graf": "Período do gráfico",
-        "intervalo_graf": "Intervalo", "gerar_relatorio": "📄 Gerar Relatório"
+        "intervalo_graf": "Intervalo", "gerar_relatorio": "📄 Gerar Relatório",
         "ola": "Olá",
         "email_alert_desc1": "O ativo",
         "email_alert_desc2": "atingiu o preço configurado",
@@ -376,7 +376,7 @@ idiomas = {
         "smtp_port": "Puerto", "email_from": "Email origen", "email_password": "Contraseña",
         "email_to": "Email destino", "enable_email": "Activar alertas por email",
         "performance_sim": "📈 Rendimiento Simulado", "periodo_graf": "Período del gráfico",
-        "intervalo_graf": "Intervalo", "gerar_relatorio": "📄 Generar Informe"
+        "intervalo_graf": "Intervalo", "gerar_relatorio": "📄 Generar Informe",
         "ola": "Hola",
         "email_alert_desc1": "El activo",
         "email_alert_desc2": "alcanzó el precio configurado",
