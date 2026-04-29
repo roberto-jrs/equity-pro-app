@@ -289,6 +289,15 @@ idiomas = {
         "email_to": "To Email", "enable_email": "Enable email alerts",
         "performance_sim": "📈 Simulated Performance", "periodo_graf": "Chart Period",
         "intervalo_graf": "Interval", "gerar_relatorio": "📄 Generate Report"
+        "ola": "Hello",
+        "email_alert_desc1": "The asset",
+        "email_alert_desc2": "has reached the configured price",
+        "preco_atual": "Current price",
+        "condicao": "Condition",
+        "preco": "Price",
+        "email_alert_cta": "Access Equity Pro to see more details and make your investment decision.",
+        "acessar_painel": "Access Dashboard",
+        "email_footer": "This is an automated email from Equity Pro. Please do not reply.",
     },
     "Português (BR)": {
         "titulo_idioma": "IDIOMA", "config": "CONFIGURAÇÕES", "moeda": "Moeda de Exibição:",
@@ -315,6 +324,15 @@ idiomas = {
         "email_to": "E-mail destino", "enable_email": "Ativar alertas por e-mail",
         "performance_sim": "📈 Performance Simulada", "periodo_graf": "Período do gráfico",
         "intervalo_graf": "Intervalo", "gerar_relatorio": "📄 Gerar Relatório"
+        "ola": "Olá",
+        "email_alert_desc1": "O ativo",
+        "email_alert_desc2": "atingiu o preço configurado",
+        "preco_atual": "Preço atual",
+        "condicao": "Condição",
+        "preco": "Preço",
+        "email_alert_cta": "Acesse o Equity Pro para ver mais detalhes e tomar sua decisão de investimento.",
+        "acessar_painel": "Acessar Painel",
+        "email_footer": "Este é um e-mail automático do Equity Pro. Por favor, não responda.",
     },
     "Español": {
         # (similar, por brevidade mantenho igual ao PT mas com tradução para ES, você pode completar depois)
@@ -342,6 +360,15 @@ idiomas = {
         "email_to": "Email destino", "enable_email": "Activar alertas por email",
         "performance_sim": "📈 Rendimiento Simulado", "periodo_graf": "Período del gráfico",
         "intervalo_graf": "Intervalo", "gerar_relatorio": "📄 Generar Informe"
+        "ola": "Hola",
+        "email_alert_desc1": "El activo",
+        "email_alert_desc2": "alcanzó el precio configurado",
+        "preco_atual": "Precio actual",
+        "condicao": "Condición",
+        "preco": "Precio",
+        "email_alert_cta": "Acceda a Equity Pro para ver más detalles y tomar su decisión de inversión.",
+        "acessar_painel": "Acceder al Panel",
+        "email_footer": "Este es un correo automático de Equity Pro. Por favor, no responda.",
     }
 }
 
@@ -866,96 +893,53 @@ if st.session_state.alertas:
                 
                 # Envio de e-mail via Gmail
                 if usuario_logado.get('email'):
-                    from email_utils import enviar_email_gmail
-                    
-                    # Obtém o texto traduzido para a direção do alerta
-                    if alerta["direcao"] == "above":
-                        texto_direcao = t["acima"]
-                    else:
-                        texto_direcao = t["abaixo"]
-                    
-                    assunto = f" {t['alertas_titulo']} - {alerta['ticker']}"
-                    corpo_html = f"""
-                    <html>
-                    <head>
-                        <style>
-                            body {{
-                                font-family: Arial, sans-serif;
-                                line-height: 1.6;
-                                color: #333;
-                            }}
-                            .container {{
-                                max-width: 600px;
-                                margin: 0 auto;
-                                padding: 20px;
-                                border: 1px solid #ddd;
-                                border-radius: 8px;
-                                background-color: #f9f9f9;
-                            }}
-                            .header {{
-                                text-align: center;
-                                padding-bottom: 10px;
-                                border-bottom: 2px solid #007bff;
-                            }}
-                            .content {{
-                                padding: 20px 0;
-                            }}
-                            .price {{
-                                font-size: 28px;
-                                font-weight: bold;
-                                color: #007bff;
-                            }}
-                            .alert-detail {{
-                                background-color: #fff3cd;
-                                padding: 10px;
-                                border-left: 4px solid #ffc107;
-                                margin: 15px 0;
-                            }}
-                            .footer {{
-                                font-size: 12px;
-                                color: #777;
-                                text-align: center;
-                                margin-top: 20px;
-                                border-top: 1px solid #ddd;
-                                padding-top: 10px;
-                            }}
-                            .button {{
-                                display: inline-block;
-                                background-color: #007bff;
-                                color: white;
-                                text-decoration: none;
-                                padding: 10px 20px;
-                                border-radius: 5px;
-                                margin-top: 15px;
-                            }}
-                        </style>
-                    </head>
-                    <body>
-                        <div class="container">
-                            <div class="header">
-                                <h2> {t['alertas_titulo']} - Equity Pro</h2>
-                            </div>
-                            <div class="content">
-                                <p>Olá <strong>{usuario_logado['nome']}</strong>,</p>
-                                <p>O ativo <strong>{alerta['ticker']}</strong> {t['acima_abaixo'].lower()} do preço configurado no seu alerta:</p>
-                                <div class="alert-detail">
-                                    <p><strong>Preço atual:</strong> <span class="price">${preco_atual:.2f}</span></p>
-                                    <p><strong>Condição:</strong> Preço {texto_direcao} de <strong>${alerta['preco']:.2f}</strong></p>
-                                </div>
-                                <p>Acesse o Equity Pro para ver mais detalhes e tomar sua decisão de investimento.</p>
-                                <p style="text-align: center;">
-                                    <a href="https://equityproapp-jrsiqueira.streamlit.app" class="button">Acessar Painel</a>
-                                </p>
-                            </div>
-                            <div class="footer">
-                                <p>Este é um e-mail automático do Equity Pro. Por favor, não responda.</p>
-                                <p>© 2025 Equity Pro - Análise e Simulação de Investimentos</p>
-                            </div>
-                        </div>
-                    </body>
-                    </html>
-                    """
-                    enviar_email_gmail(usuario_logado['email'], usuario_logado['nome'], assunto, corpo_html)
+    from email_utils import enviar_email_gmail
+
+    # Tradução dos textos do e-mail
+    texto_direcao = t["acima"] if alerta["direcao"] == "above" else t["abaixo"]
+    assunto = f"🔔 {t['alertas_titulo']} - {alerta['ticker']}"
+    
+    corpo_html = f"""
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }}
+            .header {{ text-align: center; padding-bottom: 10px; border-bottom: 2px solid #007bff; }}
+            .content {{ padding: 20px 0; }}
+            .price {{ font-size: 28px; font-weight: bold; color: #007bff; }}
+            .alert-detail {{ background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 15px 0; }}
+            .footer {{ font-size: 12px; color: #777; text-align: center; margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px; }}
+            .button {{ display: inline-block; background-color: #007bff; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; margin-top: 15px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>🔔 {t['alertas_titulo']} - Equity Pro</h2>
+            </div>
+            <div class="content">
+                <p>{t.get('ola', 'Olá')} <strong>{usuario_logado['nome']}</strong>,</p>
+                <p>{t.get('email_alert_desc1', 'O ativo')} <strong>{alerta['ticker']}</strong> {t.get('email_alert_desc2', 'atingiu o preço configurado')}:</p>
+                <div class="alert-detail">
+                    <p><strong>{t.get('preco_atual', 'Preço atual')}:</strong> <span class="price">${preco_atual:.2f}</span></p>
+                    <p><strong>{t.get('condicao', 'Condição')}:</strong> {t.get('preco', 'Preço')} {texto_direcao} <strong>${alerta['preco']:.2f}</strong></p>
+                </div>
+                <p>{t.get('email_alert_cta', 'Acesse o Equity Pro para ver mais detalhes e tomar sua decisão de investimento.')}</p>
+                <p style="text-align: center;">
+                    <a href="https://equityproapp-jrsiqueira.streamlit.app" class="button">{t.get('acessar_painel', 'Acessar Painel')}</a>
+                </p>
+            </div>
+            <div class="footer">
+                <p>{t.get('email_footer', 'Este é um e-mail automático do Equity Pro. Por favor, não responda.')}</p>
+                <p>© 2025 Equity Pro - {t.get('subtitulo', 'Análise e Simulação de Investimentos')}</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    enviar_email_gmail(usuario_logado['email'], usuario_logado['nome'], assunto, corpo_html)
                 else:
                     st.warning("Usuário não possui e-mail cadastrado. Alerta não enviado.")
                 
