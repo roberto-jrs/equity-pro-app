@@ -176,6 +176,34 @@ def generate_report_html(ticker, nome, price, change, hist, indicadores, capital
     </html>
     """
     return html
+
+def formatar_valor_moeda(valor, moeda_destino, simbolo=None):
+    """
+    Formata valor numérico (float) no padrão de moeda escolhido.
+    Exemplos:
+        USD: $ 1,234,567.89
+        BRL: R$ 1.234.567,89
+        EUR: € 1.234.567,89
+    """
+    if simbolo is None:
+        if moeda_destino == "USD ($)":
+            simbolo = "$"
+        elif moeda_destino == "BRL (R$)":
+            simbolo = "R$"
+        else:  # EUR
+            simbolo = "€"
+    
+    # Formata o número com 2 decimais e separador americano (vírgula milhar, ponto decimal)
+    s = f"{valor:,.2f}"
+    
+    if moeda_destino == "USD ($)":
+        return f"{simbolo} {s}"
+    else:
+        # Troca os separadores: vírgula milhar -> ponto; ponto decimal -> vírgula
+        partes = s.split('.')
+        inteiro = partes[0].replace(',', '.')  # troca vírgulas por pontos
+        decimal = partes[1]
+        return f"{simbolo} {inteiro},{decimal}"
     
 # ===================================================================
 # 1. CONFIGURAÇÃO DE PÁGINA
