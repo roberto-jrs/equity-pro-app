@@ -910,7 +910,8 @@ for i, ativo in enumerate(ativos_f):
                         fig_perf = px.line(x=patrimonio.index, y=patrimonio, title="Evolução do Patrimônio", labels={"x": "Data", "y": f"Patrimônio ({simb})"})
                         fig_perf.update_layout(height=300)
                         st.plotly_chart(fig_perf, use_container_width=True)
-                        st.caption(f"Patrimônio final: {simb} {patrimonio.iloc[-1]:,.2f}")
+                        patrimonio_final_formatado = formatar_valor_moeda(patrimonio.iloc[-1], st.session_state.moeda_save, simb)
+                        st.caption(f"Patrimônio final: {patrimonio_final_formatado}")
 
                         # Botão gerar relatório
                         if st.button(t["gerar_relatorio"], key=f"rel_{ticker}_{i}"):
