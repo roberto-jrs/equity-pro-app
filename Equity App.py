@@ -653,27 +653,27 @@ with st.sidebar:
     
     # Listagem de alertas ativos
     if st.session_state.alertas:
-    st.write("**Alertas ativos:**")
-    brl_rate, eur_rate = get_rates()
-    for i, alert in enumerate(st.session_state.alertas):
-        preco_visual, simbolo = converter_preco(
-            alert["preco_original"],
-            alert["moeda_base"],
-            st.session_state.moeda_save,
-            brl_rate,
-            eur_rate
-        )
-        preco_formatado = formatar_valor_moeda(preco_visual, st.session_state.moeda_save, simbolo)
-        st.caption(
-            f"{alert['ticker']} - {'acima' if alert['direcao']=='above' else 'abaixo'} "
-            f"{preco_formatado}"
-        )
-    if st.button("🗑️ Limpar todos", key="limpar_todos_alertas"):
-        for alert in st.session_state.alertas:
-            if alert.get("id"):
-                desativar_alerta(alert["id"])
-        st.session_state.alertas = []
-        st.rerun()
+        st.write("**Alertas ativos:**")
+        brl_rate, eur_rate = get_rates()
+        for i, alert in enumerate(st.session_state.alertas):
+            preco_visual, simbolo = converter_preco(
+                alert["preco_original"],
+                alert["moeda_base"],
+                st.session_state.moeda_save,
+                brl_rate,
+                eur_rate
+            )
+            preco_formatado = formatar_valor_moeda(preco_visual, st.session_state.moeda_save, simbolo)
+            st.caption(
+                f"{alert['ticker']} - {'acima' if alert['direcao']=='above' else 'abaixo'} "
+                f"{preco_formatado}"
+            )
+        if st.button("🗑️ Limpar todos", key="limpar_todos_alertas"):
+            for alert in st.session_state.alertas:
+                if alert.get("id"):
+                    desativar_alerta(alert["id"])
+            st.session_state.alertas = []
+            st.rerun()
 
     st.divider()
     st.header("📊 " + t["backtest_titulo"])
