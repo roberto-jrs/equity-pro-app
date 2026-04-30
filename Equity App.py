@@ -1022,6 +1022,9 @@ if st.session_state.alertas:
                 texto_direcao = t["acima"] if alerta["direcao"] == "above" else t["abaixo"]
 
                 assunto = f"🔔 {t['alertas_titulo']} - {alerta['ticker']}"
+
+                preco_atual_formatado = formatar_valor_moeda(preco_atual_conv, moeda_destino, simbolo)
+                preco_alvo_formatado = formatar_valor_moeda(preco_alvo_conv, moeda_destino, simbolo)
                 
                 corpo_html = f"""
                 <html>
@@ -1045,8 +1048,8 @@ if st.session_state.alertas:
                             <p>{t['ola']} <strong>{usuario_logado['nome']}</strong>,</p>
                             <p>{t['email_alert_desc1']} <strong>{alerta['ticker']}</strong> {t['email_alert_desc2']}:</p>
                             <div class="alert-detail">
-                                <p><strong>{t['preco_atual']}:</strong> <span class="price">{simbolo} {preco_atual_conv:,.2f}</span></p>
-                                <p><strong>{t['condicao']}:</strong> {t['preco']} {texto_direcao} <strong>{simbolo} {preco_alvo_conv:,.2f}</strong></p>
+                                <p><strong>{t['preco_atual']}:</strong> <span class="price">{preco_atual_formatado}</span></p>
+                                <p><strong>{t['condicao']}:</strong> {t['preco']} {texto_direcao} <strong>{preco_atual_formatado}</strong></p>
                             </div>
                             <p>{t['email_alert_cta']}</p>
                             <p style="text-align: center;">
