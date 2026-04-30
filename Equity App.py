@@ -796,8 +796,9 @@ for i, ativo in enumerate(ativos_f):
                 qtd_sugerida = invest_local / price if price > 0 else 0
             else:
                 qtd_sugerida = invest_usd / price if price > 0 else 0
-            st.caption(f"{t['info_detalhe']} {simb_m} {st.session_state.invest_save:,.2f} → {t['quantidade_sugerida']} **{qtd_sugerida:.4f}**")
-            st.caption(f"Code: `{ticker}`")
+            capital_formatado = formatar_valor_moeda(st.session_state.invest_save, st.session_state.moeda_save, simb_m)
+            st.caption(f"{t['info_detalhe']} {capital_formatado} → {t['quantidade_sugerida']} **{qtd_sugerida:.4f}**")
+            # st.caption(f"Code: `{ticker}`")
 
             # GRÁFICOS COM SELETOR DE PERÍODO E INDICADORES AVANÇADOS
             with st.expander(f"📈 {t['grafico_h']}", expanded=st.session_state.show_all_charts):
