@@ -781,7 +781,8 @@ for i, ativo in enumerate(ativos_f):
             col_nome, col_badge = st.columns([2,1])
             col_nome.markdown(f"**{ativo['nome']}**")
             col_badge.markdown(f"<span style='background:#26a69a; color:white; padding:2px 6px; border-radius:4px; font-size:9px;'>{label_status}</span>", unsafe_allow_html=True)
-            st.markdown(f"### {formatar_valor_moeda(p_conv, st.session_state.moeda_save, simb)}")
+            preco_formatado = formatar_valor_moeda(p_conv, st.session_state.moeda_save, simb)
+            st.markdown(f"### {preco_formatado}")
             cor_var = '#26a69a' if change >= 0 else '#ef5350'
             seta = '▲' if change >= 0 else '▼'
             st.markdown(f"<p style='color:{cor_var}; font-weight:bold;'>{seta} {abs(change):.2f}%</p>", unsafe_allow_html=True)
