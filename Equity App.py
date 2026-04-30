@@ -664,8 +664,8 @@ with st.sidebar:
                 eur_rate
             )
             st.caption(
-                f"{alert['ticker']} - {'acima' if alert['direcao']=='above' else 'abaixo'} "
-                f"{simbolo} {preco_visual:,.2f}"
+                preco_formatado = formatar_valor_moeda(preco_visual, st.session_state.moeda_save, simbolo)
+                st.caption(f"{alert['ticker']} - {'acima' if alert['direcao']=='above' else 'abaixo'} {preco_formatado}")
             )
         if st.button("🗑️ Limpar todos", key="limpar_todos_alertas"):
             for alert in st.session_state.alertas:
