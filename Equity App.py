@@ -48,14 +48,44 @@ def validar_token(token_str, dias_validade=30):
 # ===================================================================
 # FUNÇÕES AUXILIARES 
 # ===================================================================
-@st.cache_data(ttl=30)   # atualiza a cada 30 segundos
+@st.cache_data(ttl=30)
 def get_rates():
-    try:
-        usd_brl = yf.Ticker("USDBRL=X").fast_info.get('last_price', 5.15)
-        usd_eur = yf.Ticker("EUR=X").fast_info.get('last_price', 0.92)
-        return usd_brl, usd_eur
-    except:
-        return 5.15, 0.92
+    # Tenta obter a cotação do dólar real (USD/BRL)
+    usd_brl = None
+    usd_eur = None
+    
+    for _ in range(3):  # tenta até 3 vezes
+        try:
+            ticker_brl = yf.Ticker("USDBRL=X")
+            usd_brl = ticker_brl.fast_info.get('last_price')
+            if usd_brl and usd_brl > 0:
+                break
+        except:
+            pass
+        time.sleep(0.5)
+    
+    for _ in range(3):
+        try:
+            ticker_eur = yf.Ticker("EUR=X")
+            usd_eur = ticker_eur.fast_info.get('last_price')
+            if usd_eur and usd_eur > 0:
+                break
+        except:
+            pass
+        time.sleep(0.5)
+    
+    # Se não conseguiu obter valores, recupera da sessão ou usa fallbacks padrão
+    if not usd_brl or usd_brl <= 0:
+        usd_brl = st.session_state.get('_last_usd_brl', 5.15)
+    else:
+        st.session_state['_last_usd_brl'] = usd_brl
+        
+    if not usd_eur or usd_eur <= 0:
+        usd_eur = st.session_state.get('_last_usd_eur', 0.92)
+    else:
+        st.session_state['_last_usd_eur'] = usd_eur
+    
+    return usd_brl, usd_eur
 
 def get_moeda_base(ticker):
     if ticker.endswith(".SA"):
