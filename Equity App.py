@@ -447,16 +447,6 @@ def login_ui():
                 else:
                     st.error(t.get("signup_error", "Usuário já existe"))
 
-# Função auxiliar para buscar usuário por username (adicione no database.py)
-def buscar_usuario_por_username(username):
-    from database import get_connection
-    with get_connection() as conn:
-        cursor = conn.execute("SELECT id, username, nome, email, telefone, senha_hash FROM usuarios WHERE username = ?", (username,))
-        row = cursor.fetchone()
-        if row:
-            return {"id": row[0], "username": row[1], "nome": row[2], "email": row[3], "telefone": row[4]}
-    return None
-
 if not st.session_state["autenticado"]:
     login_ui()
     st.stop()
