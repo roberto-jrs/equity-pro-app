@@ -229,29 +229,45 @@ if not st.session_state["autenticado"]:
                 st.rerun()
 
 def login_ui():
-    st.title("〽︎ Equity Pro")
+    # Seletor de idioma (acima das abas)
+    idioma_choices = list(idiomas.keys())
+    col_lang, _ = st.columns([1, 2])
+    with col_lang:
+        selected_lang = st.selectbox(
+            "Language / Idioma / Idioma",
+            idioma_choices,
+            index=idioma_choices.index(st.session_state.sel_idioma),
+            key="login_lang_selector"
+        )
+        if selected_lang != st.session_state.sel_idioma:
+            st.session_state.sel_idioma = selected_lang
+            st.rerun()
+    
+    t = idiomas[st.session_state.sel_idioma]
+    
+    st.title("🔐 Equity Pro - " + t["login_tab"])
     
     if "aba_atual" not in st.session_state:
-        st.session_state["aba_atual"] = "Login"
+        st.session_state["aba_atual"] = t["login_tab"]
     
     if st.session_state.get("cadastro_sucesso", False):
-        st.session_state["aba_atual"] = "Login"
+        st.session_state["aba_atual"] = t["login_tab"]
         st.session_state["cadastro_sucesso"] = False
     
     aba = st.radio(
         "",
-        ["Login", "Criar Conta"],
-        index=0 if st.session_state["aba_atual"] == "Login" else 1,
+        [t["login_tab"], t["signup_tab"]],
+        index=0 if st.session_state["aba_atual"] == t["login_tab"] else 1,
         horizontal=True,
         key="selecao_aba"
     )
     st.session_state["aba_atual"] = aba
     
-    if aba == "Login":
-        username = st.text_input("Usuário", key="login_user")
-        senha = st.text_input("Senha", type="password", key="login_pass")
-        lembrar = st.checkbox("Lembrar meu acesso")
-        if st.button("Entrar", key="btn_login"):
+    if aba == t["login_tab"]:
+        username = st.text_input(t["username"], key="login_user")
+        senha = st.text_input(t["password"], type="password", key="login_pass")
+        lembrar = st.checkbox(t["remember_me"])
+        if st.button(t["login_button"], key="btn_login"):
             user = verificar_login(username, senha)
             if user:
                 st.session_state["autenticado"] = True
@@ -261,28 +277,28 @@ def login_ui():
                     st.query_params["session"] = token
                 st.rerun()
             else:
-                st.error("Usuário ou senha inválidos")
+                st.error(t.get("login_error", "Usuário ou senha inválidos"))
     
-    else:
-        new_username = st.text_input("Usuário (login)", key="cad_user")
-        new_nome = st.text_input("Nome completo", key="cad_nome")
-        new_email = st.text_input("E-mail", key="cad_email")
-        new_telefone = st.text_input("Telefone (Opcional)", key="cad_telefone")
-        new_senha = st.text_input("Senha", type="password", key="cad_pass")
-        new_senha2 = st.text_input("Confirmar senha", type="password", key="cad_pass2")
-        if st.button("Cadastrar", key="btn_cad"):
+    else:  # Criar conta
+        new_username = st.text_input(t["username"], key="cad_user")
+        new_nome = st.text_input(t["full_name"], key="cad_nome")
+        new_email = st.text_input(t["email_optional"], key="cad_email")
+        new_telefone = st.text_input(t["phone_optional"], key="cad_telefone")
+        new_senha = st.text_input(t["password"], type="password", key="cad_pass")
+        new_senha2 = st.text_input(t["confirm_password"], type="password", key="cad_pass2")
+        if st.button(t["signup_button"], key="btn_cad"):
             if new_senha != new_senha2:
                 st.error("Senhas não coincidem")
             elif len(new_username) < 3:
-                st.error("Usuário deve ter pelo menos 3 caracteres")
+                st.error(t.get("username_min", "Usuário deve ter pelo menos 3 caracteres"))
             else:
                 ok = cadastrar_usuario(new_username, new_nome, new_senha, new_email, new_telefone)
                 if ok:
                     st.session_state["cadastro_sucesso"] = True
-                    st.success("Usuário criado! Redirecionando para o login...")
+                    st.success(t.get("signup_success", "Usuário criado! Redirecionando para o login..."))
                     st.rerun()
                 else:
-                    st.error("Usuário já existe")
+                    st.error(t.get("signup_error", "Usuário já existe"))
 
 # Função auxiliar para buscar usuário por username (adicione no database.py)
 def buscar_usuario_por_username(username):
