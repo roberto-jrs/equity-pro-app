@@ -48,7 +48,7 @@ def validar_token(token_str, dias_validade=30):
 # ===================================================================
 # FUNÇÕES AUXILIARES 
 # ===================================================================
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=30)   # atualiza a cada 30 segundos
 def get_rates():
     try:
         usd_brl = yf.Ticker("USDBRL=X").fast_info.get('last_price', 5.15)
