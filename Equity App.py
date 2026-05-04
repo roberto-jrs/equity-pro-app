@@ -48,43 +48,39 @@ def validar_token(token_str, dias_validade=30):
 # ===================================================================
 # FUNÇÕES AUXILIARES 
 # ===================================================================
-@st.cache_data(ttl=30)
 def get_rates():
-    # Tenta obter a cotação do dólar real (USD/BRL)
+    # Verifica se já existe uma taxa armazenada e se ela é recente (menos de 30 segundos)
+    now = time.time()
+    last_update = st.session_state.get('_rates_last_update', 0)
+    if now - last_update < 30:
+        # Retorna os valores armazenados (sem chamar API)
+        return (
+            st.session_state.get('_last_usd_brl', 5.15),
+            st.session_state.get('_last_usd_eur', 0.92)
+        )
+    
+    # Caso os dados estejam desatualizados ou não existam, busca novos
     usd_brl = None
     usd_eur = None
-    
-    for _ in range(3):  # tenta até 3 vezes
-        try:
-            ticker_brl = yf.Ticker("USDBRL=X")
-            usd_brl = ticker_brl.fast_info.get('last_price')
-            if usd_brl and usd_brl > 0:
-                break
-        except:
-            pass
-        time.sleep(0.5)
-    
-    for _ in range(3):
-        try:
-            ticker_eur = yf.Ticker("EUR=X")
-            usd_eur = ticker_eur.fast_info.get('last_price')
-            if usd_eur and usd_eur > 0:
-                break
-        except:
-            pass
-        time.sleep(0.5)
-    
-    # Se não conseguiu obter valores, recupera da sessão ou usa fallbacks padrão
-    if not usd_brl or usd_brl <= 0:
+    try:
+        import requests
+        resp_brl = requests.get("https://economia.awesomeapi.com.br/json/last/USD-BRL")
+        data_brl = resp_brl.json()
+        usd_brl = float(data_brl['USDBRL']['bid'])
+    except:
         usd_brl = st.session_state.get('_last_usd_brl', 5.15)
-    else:
-        st.session_state['_last_usd_brl'] = usd_brl
-        
-    if not usd_eur or usd_eur <= 0:
-        usd_eur = st.session_state.get('_last_usd_eur', 0.92)
-    else:
-        st.session_state['_last_usd_eur'] = usd_eur
     
+    try:
+        resp_eur = requests.get("https://economia.awesomeapi.com.br/json/last/EUR-USD")
+        data_eur = resp_eur.json()
+        usd_eur = float(data_eur['EURUSD']['bid'])
+    except:
+        usd_eur = st.session_state.get('_last_usd_eur', 0.92)
+    
+    # Atualiza a sessão
+    st.session_state['_last_usd_brl'] = usd_brl
+    st.session_state['_last_usd_eur'] = usd_eur
+    st.session_state['_rates_last_update'] = now
     return usd_brl, usd_eur
 
 def get_moeda_base(ticker):
