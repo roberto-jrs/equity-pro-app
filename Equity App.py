@@ -351,6 +351,41 @@ idiomas = {
 
 def mudar_idioma():
     st.session_state.sel_idioma = st.session_state.idioma_temp
+
+# ===================================================================
+# 4. ESTADO DA SESSÃO (inicialização completa)
+# ===================================================================
+if 'sel_idioma' not in st.session_state:
+    st.session_state.sel_idioma = "English"
+if 'setor_selector' not in st.session_state:
+    st.session_state.setor_selector = "All"
+if 'moeda_save' not in st.session_state:
+    st.session_state.moeda_save = "USD ($)"
+if 'invest_save' not in st.session_state:
+    st.session_state.invest_save = 10000.00
+if 'sel_fuso' not in st.session_state:
+    st.session_state.sel_fuso = 'America/New_York'
+if 'show_all_charts' not in st.session_state:
+    st.session_state.show_all_charts = False
+if 'alertas' not in st.session_state:
+    st.session_state.alertas = []
+if 'meus_ativos' not in st.session_state:
+    st.session_state.meus_ativos = [
+        {"ticker": "AAPL", "nome": "Apple Inc.", "setor": "Tecnologia", "moeda_base": "USD"},
+        {"ticker": "NVDA", "nome": "NVIDIA Corp.", "setor": "Tecnologia", "moeda_base": "USD"},
+        {"ticker": "MSFT", "nome": "Microsoft Corp.", "setor": "Tecnologia", "moeda_base": "USD"},
+        {"ticker": "GOOGL", "nome": "Alphabet Inc.", "setor": "Tecnologia", "moeda_base": "USD"},
+        {"ticker": "TSLA", "nome": "Tesla, Inc.", "setor": "Automotivo", "moeda_base": "USD"},
+        {"ticker": "AMZN", "nome": "Amazon.com", "setor": "Varejo Digital", "moeda_base": "USD"},
+        {"ticker": "META", "nome": "Meta Platforms", "setor": "Tecnologia", "moeda_base": "USD"},
+        {"ticker": "V", "nome": "Visa Inc.", "setor": "Financeiro", "moeda_base": "USD"},
+        {"ticker": "JPM", "nome": "JPMorgan Chase", "setor": "Financeiro", "moeda_base": "USD"},
+        {"ticker": "KO", "nome": "Coca-Cola Co.", "setor": "Consumo", "moeda_base": "USD"},
+        {"ticker": "DIS", "nome": "Walt Disney Co.", "setor": "Entretenimento", "moeda_base": "USD"},
+        {"ticker": "NFLX", "nome": "Netflix, Inc.", "setor": "Entretenimento", "moeda_base": "USD"},
+        {"ticker": "BTC-USD", "nome": "Bitcoin", "setor": "Cripto", "moeda_base": "USD"},
+        {"ticker": "ETH-USD", "nome": "Ethereum", "setor": "Cripto", "moeda_base": "USD"}
+    ]
     
 # ===================================================================
 # 1. CONFIGURAÇÃO DE PÁGINA
@@ -555,41 +590,6 @@ def stochastic(high, low, close, k_period=14, d_period=3):
     stoch_k = 100 * ((close - low_min) / (high_max - low_min))
     stoch_d = stoch_k.rolling(window=d_period).mean()
     return stoch_k, stoch_d
-
-# ===================================================================
-# 4. ESTADO DA SESSÃO (inicialização completa)
-# ===================================================================
-if 'sel_idioma' not in st.session_state:
-    st.session_state.sel_idioma = "English"
-if 'setor_selector' not in st.session_state:
-    st.session_state.setor_selector = "All"
-if 'moeda_save' not in st.session_state:
-    st.session_state.moeda_save = "USD ($)"
-if 'invest_save' not in st.session_state:
-    st.session_state.invest_save = 10000.00
-if 'sel_fuso' not in st.session_state:
-    st.session_state.sel_fuso = 'America/New_York'
-if 'show_all_charts' not in st.session_state:
-    st.session_state.show_all_charts = False
-if 'alertas' not in st.session_state:
-    st.session_state.alertas = []
-if 'meus_ativos' not in st.session_state:
-    st.session_state.meus_ativos = [
-        {"ticker": "AAPL", "nome": "Apple Inc.", "setor": "Tecnologia", "moeda_base": "USD"},
-        {"ticker": "NVDA", "nome": "NVIDIA Corp.", "setor": "Tecnologia", "moeda_base": "USD"},
-        {"ticker": "MSFT", "nome": "Microsoft Corp.", "setor": "Tecnologia", "moeda_base": "USD"},
-        {"ticker": "GOOGL", "nome": "Alphabet Inc.", "setor": "Tecnologia", "moeda_base": "USD"},
-        {"ticker": "TSLA", "nome": "Tesla, Inc.", "setor": "Automotivo", "moeda_base": "USD"},
-        {"ticker": "AMZN", "nome": "Amazon.com", "setor": "Varejo Digital", "moeda_base": "USD"},
-        {"ticker": "META", "nome": "Meta Platforms", "setor": "Tecnologia", "moeda_base": "USD"},
-        {"ticker": "V", "nome": "Visa Inc.", "setor": "Financeiro", "moeda_base": "USD"},
-        {"ticker": "JPM", "nome": "JPMorgan Chase", "setor": "Financeiro", "moeda_base": "USD"},
-        {"ticker": "KO", "nome": "Coca-Cola Co.", "setor": "Consumo", "moeda_base": "USD"},
-        {"ticker": "DIS", "nome": "Walt Disney Co.", "setor": "Entretenimento", "moeda_base": "USD"},
-        {"ticker": "NFLX", "nome": "Netflix, Inc.", "setor": "Entretenimento", "moeda_base": "USD"},
-        {"ticker": "BTC-USD", "nome": "Bitcoin", "setor": "Cripto", "moeda_base": "USD"},
-        {"ticker": "ETH-USD", "nome": "Ethereum", "setor": "Cripto", "moeda_base": "USD"}
-    ]
 
 # ===================================================================
 # 8. SIDEBAR (configurações, gerenciamento de ativos, e-mail)
