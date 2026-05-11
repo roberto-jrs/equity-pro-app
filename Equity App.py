@@ -412,7 +412,22 @@ if 'meus_ativos' not in st.session_state:
         {"ticker": "BTC-USD", "nome": "Bitcoin", "setor": "Cripto", "moeda_base": "USD"},
         {"ticker": "ETH-USD", "nome": "Ethereum", "setor": "Cripto", "moeda_base": "USD"}
     ]
-    
+
+# ===================================================================
+# TRATAMENTO DE IDIOMA VIA URL (para os botões de bandeira)
+# ===================================================================
+query_params = st.query_params
+if "lang" in query_params:
+    lang_map = {
+        "en": "English",
+        "pt": "Português (BR)",
+        "es": "Español"
+    }
+    if query_params["lang"] in lang_map:
+        st.session_state.sel_idioma = lang_map[query_params["lang"]]
+        # Remove o parâmetro para não poluir a URL
+        st.query_params.clear()
+
 # ===================================================================
 # 1. CONFIGURAÇÃO DE PÁGINA
 # ===================================================================
