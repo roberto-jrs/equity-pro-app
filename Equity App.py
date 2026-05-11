@@ -437,31 +437,35 @@ if not st.session_state["autenticado"]:
                 st.rerun()
 
 def login_ui():
-    # Seletor de idioma (acima das abas)
-    idioma_choices = list(idiomas.keys())
-    col_lang, _ = st.columns([1, 2])
-    with col_lang:
-        selected_lang = st.selectbox(
-            "Language / Idioma / Idioma",
-            idioma_choices,
-            index=idioma_choices.index(st.session_state.sel_idioma),
-            key="login_lang_selector"
-        )
-        if selected_lang != st.session_state.sel_idioma:
-            st.session_state.sel_idioma = selected_lang
-            st.rerun()
-    
+    # Layout: título à esquerda, bandeiras à direita
+    col_titulo, col_flags = st.columns([3, 1])
+    with col_titulo:
+        st.title("〽︎ Equity Pro")
+    with col_flags:
+        # Linha horizontal com os botões de bandeira
+        flag_cols = st.columns(3)
+        with flag_cols[0]:
+            if st.button("🇺🇸", key="flag_en", help="English"):
+                st.session_state.sel_idioma = "English"
+                st.rerun()
+        with flag_cols[1]:
+            if st.button("🇧🇷", key="flag_pt", help="Português"):
+                st.session_state.sel_idioma = "Português (BR)"
+                st.rerun()
+        with flag_cols[2]:
+            if st.button("🇪🇸", key="flag_es", help="Español"):
+                st.session_state.sel_idioma = "Español"
+                st.rerun()
+
     t = idiomas[st.session_state.sel_idioma]
-    
-    st.title("〽︎ Equity Pro")
-    
+
     if "aba_atual" not in st.session_state:
         st.session_state["aba_atual"] = t["login_tab"]
-    
+
     if st.session_state.get("cadastro_sucesso", False):
         st.session_state["aba_atual"] = t["login_tab"]
         st.session_state["cadastro_sucesso"] = False
-    
+
     aba = st.radio(
         "",
         [t["login_tab"], t["signup_tab"]],
@@ -470,7 +474,7 @@ def login_ui():
         key="selecao_aba"
     )
     st.session_state["aba_atual"] = aba
-    
+
     if aba == t["login_tab"]:
         username = st.text_input(t["username"], key="login_user")
         senha = st.text_input(t["password"], type="password", key="login_pass")
@@ -486,6 +490,27 @@ def login_ui():
                 st.rerun()
             else:
                 st.error(t.get("login_error", "Usuário ou senha inválidos"))
+
+    else:  # Criar conta
+        new_username = st.text_input(t["username"], key="cad_user")
+        new_nome = st.text_input(t["full_name"], key="cad_nome")
+        new_email = st.text_input(t["email_optional"], key="cad_email")
+        new_telefone = st.text_input(t["phone_optional"], key="cad_telefone")
+        new_senha = st.text_input(t["password"], type="password", key="cad_pass")
+        new_senha2 = st.text_input(t["confirm_password"], type="password", key="cad_pass2")
+        if st.button(t["signup_button"], key="btn_cad"):
+            if new_senha != new_senha2:
+                st.error("Senhas não coincidem")
+            elif len(new_username) < 3:
+                st.error(t.get("username_min", "Usuário deve ter pelo menos 3 caracteres"))
+            else:
+                ok = cadastrar_usuario(new_username, new_nome, new_senha, new_email, new_telefone)
+                if ok:
+                    st.session_state["cadastro_sucesso"] = True
+                    st.success(t.get("signup_success", "Usuário criado! Redirecionando para o login..."))
+                    st.rerun()
+                else:
+                    st.error(t.get("signup_error", "Usuário já existe"))
     
     else:  # Criar conta
         new_username = st.text_input(t["username"], key="cad_user")
