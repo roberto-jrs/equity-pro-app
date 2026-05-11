@@ -445,25 +445,27 @@ def login_ui():
     
     with col_flags:
         st.markdown("""
-            <style>
-                .stButton button {
-                    background: transparent !important;
-                    border: none !important;
-                    font-size: 28px !important;
-                    padding: 0 4px !important;
-                    margin: 0 !important;
-                    min-width: 40px !important;
-                    box-shadow: none !important;
-                }
-                /* Reduz espaçamento entre colunas */
-                div[data-testid="column"] {
-                    padding-left: 1px !important;
-                    padding-right: 1px !important;
-                }
-            </style>
-        """, unsafe_allow_html=True)
+        <style>
+            /* Remove espaçamento entre colunas */
+            div[data-testid="column"] {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+            /* Remove padding e margin dos botões */
+            .stButton button {
+                padding: 0 !important;
+                margin: 0 !important;
+                background: transparent !important;
+                border: none !important;
+                font-size: 28px !important;
+                min-width: 32px !important;
+                width: auto !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
     
-        col_a, col_b, col_c = st.columns(3)
+    # Cria colunas com largura mínima (proporção 0.2 cada)
+    col_a, col_b, col_c = st.columns([0.2, 0.2, 0.2])
     with col_a:
         if st.button("🇺🇸", key="flag_en", help="English"):
             st.session_state.sel_idioma = "English"
