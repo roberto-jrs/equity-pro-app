@@ -512,27 +512,6 @@ def login_ui():
                 else:
                     st.error(t.get("signup_error", "Usuário já existe"))
     
-    else:  # Criar conta
-        new_username = st.text_input(t["username"], key="cad_user")
-        new_nome = st.text_input(t["full_name"], key="cad_nome")
-        new_email = st.text_input(t["email_optional"], key="cad_email")
-        new_telefone = st.text_input(t["phone_optional"], key="cad_telefone")
-        new_senha = st.text_input(t["password"], type="password", key="cad_pass")
-        new_senha2 = st.text_input(t["confirm_password"], type="password", key="cad_pass2")
-        if st.button(t["signup_button"], key="btn_cad"):
-            if new_senha != new_senha2:
-                st.error("Senhas não coincidem")
-            elif len(new_username) < 3:
-                st.error(t.get("username_min", "Usuário deve ter pelo menos 3 caracteres"))
-            else:
-                ok = cadastrar_usuario(new_username, new_nome, new_senha, new_email, new_telefone)
-                if ok:
-                    st.session_state["cadastro_sucesso"] = True
-                    st.success(t.get("signup_success", "Usuário criado! Redirecionando para o login..."))
-                    st.rerun()
-                else:
-                    st.error(t.get("signup_error", "Usuário já existe"))
-
 if not st.session_state["autenticado"]:
     login_ui()
     st.stop()
