@@ -438,22 +438,22 @@ if not st.session_state["autenticado"]:
 
 def login_ui():
     # Layout: título à esquerda, bandeiras à direita (mais próximas)
-    col_titulo, col_flags = st.columns([3, 1])
-with col_titulo:
-    st.title("〽︎ Equity Pro")
-with col_flags:
+        col_titulo, col_flags = st.columns([3, 1])
+    with col_titulo:
+        st.title("〽︎ Equity Pro")
+    with col_flags:
     # Reduz espaçamento entre botões via CSS
-    st.markdown("""
-        <style>
-            .stButton button {
-                margin-left: 4px !important;
-                margin-right: 4px !important;
-                padding: 0 8px !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+        st.markdown("""
+            <style>
+                .stButton button {
+                    margin-left: 4px !important;
+                    margin-right: 4px !important;
+                    padding: 0 8px !important;
+                }
+            </style>
+        """, unsafe_allow_html=True)
     # Três botões sem quebras de linha
-    flag_cols = st.columns([0.3, 0.3, 0.3])
+        flag_cols = st.columns([0.3, 0.3, 0.3])
     with flag_cols[0]:
         if st.button("🇺🇸", key="flag_en", help="English"):
             st.session_state.sel_idioma = "English"
