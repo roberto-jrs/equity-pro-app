@@ -444,30 +444,38 @@ def login_ui():
         st.title("〽︎ Equity Pro")
     
     with col_flags:
-        # CSS para aproximar os botões
-        st.markdown("""
-            <style>
-                div[data-testid="column"] button {
-                    margin-left: -8px !important;
-                    margin-right: -8px !important;
-                    padding: 0 8px !important;
-                    min-width: 40px !important;
-                }
-            </style>
-        """, unsafe_allow_html=True)
-        flag_cols = st.columns(3)
-        with flag_cols[0]:
-            if st.button("🇺🇸", key="flag_en", help="English"):
-                st.session_state.sel_idioma = "English"
-                st.rerun()
-        with flag_cols[1]:
-            if st.button("🇧🇷", key="flag_pt", help="Português"):
-                st.session_state.sel_idioma = "Português (BR)"
-                st.rerun()
-        with flag_cols[2]:
-            if st.button("🇪🇸", key="flag_es", help="Español"):
-                st.session_state.sel_idioma = "Español"
-                st.rerun()
+    st.markdown("""
+        <style>
+            .stButton button {
+                background: transparent !important;
+                border: none !important;
+                font-size: 28px !important;
+                padding: 0 4px !important;
+                margin: 0 !important;
+                min-width: 40px !important;
+                box-shadow: none !important;
+            }
+            /* Reduz espaçamento entre colunas */
+            div[data-testid="column"] {
+                padding-left: 2px !important;
+                padding-right: 2px !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        if st.button("🇺🇸", key="flag_en", help="English"):
+            st.session_state.sel_idioma = "English"
+            st.rerun()
+    with col_b:
+        if st.button("🇧🇷", key="flag_pt", help="Português"):
+            st.session_state.sel_idioma = "Português (BR)"
+            st.rerun()
+    with col_c:
+        if st.button("🇪🇸", key="flag_es", help="Español"):
+            st.session_state.sel_idioma = "Español"
+            st.rerun()
 
     t = idiomas[st.session_state.sel_idioma]
 
