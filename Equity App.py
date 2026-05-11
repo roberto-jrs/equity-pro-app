@@ -437,13 +437,27 @@ if not st.session_state["autenticado"]:
                 st.rerun()
 
 def login_ui():
+
+    st.markdown("""
+    <style>
+        /* Remove margens e paddings extras dos botões de bandeira */
+        div[data-testid="column"] button {
+            margin-left: -10px !important;
+            margin-right: -10px !important;
+            padding-left: 0px !important;
+            padding-right: 0px !important;
+            min-width: 40px !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+    
     # Layout: título à esquerda, bandeiras à direita
     col_titulo, col_flags = st.columns([3, 1])
     with col_titulo:
         st.title("〽︎ Equity Pro")
     with col_flags:
         # Linha horizontal com os botões de bandeira
-        flag_cols = st.columns([0.3, 0.3, 0.3])
+        flag_cols = st.columns(3)
         with flag_cols[0]:
             if st.button("🇺🇸", key="flag_en", help="English"):
                 st.session_state.sel_idioma = "English"
