@@ -498,7 +498,6 @@ def login_ui():
             </script>
         """, unsafe_allow_html=True)
 
-    col_a, col_b, col_c = st.columns([0.1, 0.1, 0.1])
     with col_a:
         if st.button("🇺🇸", key="flag_en", help="English"):
             st.session_state.sel_idioma = "English"
