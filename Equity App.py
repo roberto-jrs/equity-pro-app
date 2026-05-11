@@ -437,10 +437,12 @@ if not st.session_state["autenticado"]:
                 st.rerun()
 
 def login_ui():
+    # Layout: título à esquerda, bandeiras à direita (mais próximas)
     col_titulo, col_flags = st.columns([3, 1])
-    with col_titulo:
+with col_titulo:
     st.title("〽︎ Equity Pro")
-    with col_flags:
+with col_flags:
+    # Reduz espaçamento entre botões via CSS
     st.markdown("""
         <style>
             .stButton button {
