@@ -459,36 +459,55 @@ def login_ui():
         st.title("〽︎ Equity Pro")
     
     with col_flags:
-        # HTML/CSS com botões funcionais (via onclick e query parameters)
+        # CSS para estilizar os botões como bandeiras, sem fundo e com hover
         st.markdown("""
             <style>
-                .flag-holder {
+                .flag-container {
                     display: flex;
                     justify-content: flex-end;
-                    gap: 2px;
+                    gap: 4px;
                     margin-top: 12px;
                 }
-                .flag-btn {
-                    background: none;
-                    border: none;
+                .flag-container a {
+                    text-decoration: none;
+                    background: none !important;
+                    border: none !important;
                     font-size: 28px;
                     cursor: pointer;
                     padding: 0 2px;
                     border-radius: 4px;
                     transition: transform 0.1s ease;
+                    display: inline-block;
                 }
-                .flag-btn:hover {
+                .flag-container a:hover {
                     transform: scale(1.1);
+                    background: none !important;
+                }
+                /* Remove fundo azul padrão do link clicado */
+                .flag-container a:active, .flag-container a:focus {
+                    background: none !important;
                 }
             </style>
-            <div class="flag-holder">
-                <button class="flag-btn" onclick="window.location.href='?lang=en'">🇺🇸</button>
-                <button class="flag-btn" onclick="window.location.href='?lang=pt'">🇧🇷</button>
-                <button class="flag-btn" onclick="window.location.href='?lang=es'">🇪🇸</button>
+            <div class="flag-container">
+                <a href="?lang=en" target="_self">🇺🇸</a>
+                <a href="?lang=pt" target="_self">🇧🇷</a>
+                <a href="?lang=es" target="_self">🇪🇸</a>
             </div>
         """, unsafe_allow_html=True)
 
-    # daqui para baixo, todo o código original das abas (Login / Criar Conta) permanece IGUAL
+    # Captura o parâmetro da URL para alterar o idioma
+    if "lang" in st.query_params:
+        lang_param = st.query_params["lang"]
+        if lang_param == "en":
+            st.session_state.sel_idioma = "English"
+        elif lang_param == "pt":
+            st.session_state.sel_idioma = "Português (BR)"
+        elif lang_param == "es":
+            st.session_state.sel_idioma = "Español"
+        # Remove o parâmetro da URL para não manter
+        st.query_params.clear()
+        st.rerun()
+
     t = idiomas[st.session_state.sel_idioma]
 
     if "aba_atual" not in st.session_state:
