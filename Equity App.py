@@ -388,7 +388,7 @@ if 'setor_selector' not in st.session_state:
 if 'moeda_save' not in st.session_state:
     st.session_state.moeda_save = "USD ($)"
 if 'invest_save' not in st.session_state:
-    st.session_state.invest_save = 10000.00
+    st.session_state.invest_save = 1000.00
 if 'sel_fuso' not in st.session_state:
     st.session_state.sel_fuso = 'America/New_York'
 if 'show_all_charts' not in st.session_state:
