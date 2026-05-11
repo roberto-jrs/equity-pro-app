@@ -498,6 +498,20 @@ def login_ui():
             </script>
         """, unsafe_allow_html=True)
 
+    col_a, col_b, col_c = st.columns([0.1, 0.1, 0.1])
+    with col_a:
+        if st.button("🇺🇸", key="flag_en", help="English"):
+            st.session_state.sel_idioma = "English"
+            st.rerun()
+    with col_b:
+        if st.button("🇧🇷", key="flag_pt", help="Português"):
+            st.session_state.sel_idioma = "Português (BR)"
+            st.rerun()
+    with col_c:
+        if st.button("🇪🇸", key="flag_es", help="Español"):
+            st.session_state.sel_idioma = "Español"
+            st.rerun()
+    
     t = idiomas[st.session_state.sel_idioma]
 
     if "aba_atual" not in st.session_state:
