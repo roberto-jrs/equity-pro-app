@@ -444,26 +444,26 @@ def login_ui():
         st.title("〽︎ Equity Pro")
     
     with col_flags:
-    st.markdown("""
-        <style>
-            .stButton button {
-                background: transparent !important;
-                border: none !important;
-                font-size: 28px !important;
-                padding: 0 4px !important;
-                margin: 0 !important;
-                min-width: 40px !important;
-                box-shadow: none !important;
-            }
-            /* Reduz espaçamento entre colunas */
-            div[data-testid="column"] {
-                padding-left: 2px !important;
-                padding-right: 2px !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+        st.markdown("""
+            <style>
+                .stButton button {
+                    background: transparent !important;
+                    border: none !important;
+                    font-size: 28px !important;
+                    padding: 0 4px !important;
+                    margin: 0 !important;
+                    min-width: 40px !important;
+                    box-shadow: none !important;
+                }
+                /* Reduz espaçamento entre colunas */
+                div[data-testid="column"] {
+                    padding-left: 2px !important;
+                    padding-right: 2px !important;
+                }
+            </style>
+        """, unsafe_allow_html=True)
     
-    col_a, col_b, col_c = st.columns(3)
+        col_a, col_b, col_c = st.columns(3)
     with col_a:
         if st.button("🇺🇸", key="flag_en", help="English"):
             st.session_state.sel_idioma = "English"
