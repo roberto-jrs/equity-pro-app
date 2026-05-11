@@ -437,36 +437,38 @@ if not st.session_state["autenticado"]:
                 st.rerun()
 
 def login_ui():
-    # Layout: título à esquerda, bandeiras à direita (mais próximas)
-        col_titulo, col_flags = st.columns([3, 1])
+    # Layout: título à esquerda, bandeiras à direita
+    col_titulo, col_flags = st.columns([3, 1])
+    
     with col_titulo:
         st.title("〽︎ Equity Pro")
+    
     with col_flags:
-    # Reduz espaçamento entre botões via CSS
+        # CSS para aproximar os botões
         st.markdown("""
             <style>
-                .stButton button {
-                    margin-left: 4px !important;
-                    margin-right: 4px !important;
+                div[data-testid="column"] button {
+                    margin-left: -8px !important;
+                    margin-right: -8px !important;
                     padding: 0 8px !important;
+                    min-width: 40px !important;
                 }
             </style>
         """, unsafe_allow_html=True)
-    # Três botões sem quebras de linha
-        flag_cols = st.columns([0.3, 0.3, 0.3])
-    with flag_cols[0]:
-        if st.button("🇺🇸", key="flag_en", help="English"):
-            st.session_state.sel_idioma = "English"
-            st.rerun()
-    with flag_cols[1]:
-        if st.button("🇧🇷", key="flag_pt", help="Português"):
-            st.session_state.sel_idioma = "Português (BR)"
-            st.rerun()
-    with flag_cols[2]:
-        if st.button("🇪🇸", key="flag_es", help="Español"):
-            st.session_state.sel_idioma = "Español"
-            st.rerun()
-            
+        flag_cols = st.columns(3)
+        with flag_cols[0]:
+            if st.button("🇺🇸", key="flag_en", help="English"):
+                st.session_state.sel_idioma = "English"
+                st.rerun()
+        with flag_cols[1]:
+            if st.button("🇧🇷", key="flag_pt", help="Português"):
+                st.session_state.sel_idioma = "Português (BR)"
+                st.rerun()
+        with flag_cols[2]:
+            if st.button("🇪🇸", key="flag_es", help="Español"):
+                st.session_state.sel_idioma = "Español"
+                st.rerun()
+
     t = idiomas[st.session_state.sel_idioma]
 
     if "aba_atual" not in st.session_state:
