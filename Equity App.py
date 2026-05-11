@@ -437,9 +437,6 @@ if not st.session_state["autenticado"]:
                 st.rerun()
 
 def login_ui():
-    # Layout: título à esquerda, bandeiras à direita
-    col_titulo, col_flags = st.columns([3, 1])
-    
     with col_titulo:
         st.title("〽︎ Equity Pro")
     
