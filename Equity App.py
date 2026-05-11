@@ -443,7 +443,7 @@ def login_ui():
         st.title("〽︎ Equity Pro")
     with col_flags:
         # Linha horizontal com os botões de bandeira
-        flag_cols = st.columns(3)
+        flag_cols = st.columns([0.3, 0.3, 0.3])
         with flag_cols[0]:
             if st.button("🇺🇸", key="flag_en", help="English"):
                 st.session_state.sel_idioma = "English"
