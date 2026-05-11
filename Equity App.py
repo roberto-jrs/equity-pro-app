@@ -457,8 +457,8 @@ def login_ui():
                 }
                 /* Reduz espaçamento entre colunas */
                 div[data-testid="column"] {
-                    padding-left: 2px !important;
-                    padding-right: 2px !important;
+                    padding-left: 1px !important;
+                    padding-right: 1px !important;
                 }
             </style>
         """, unsafe_allow_html=True)
