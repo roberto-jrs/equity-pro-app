@@ -437,67 +437,44 @@ if not st.session_state["autenticado"]:
                 st.rerun()
 
 def login_ui():
+    # Layout: título à esquerda, bandeiras à direita
     col_titulo, col_flags = st.columns([3, 1])
     
     with col_titulo:
         st.title("〽︎ Equity Pro")
     
     with col_flags:
+        # CSS para aproximar os botões e alinhar à direita
         st.markdown("""
             <style>
-                .flag-holder {
-                    display: flex;
-                    justify-content: flex-end;
-                    gap: 2px;
-                    margin-top: 12px;
+                /* Remove espaçamento entre colunas */
+                div[data-testid="stHorizontalBlock"] {
+                    gap: 0px !important;
+                    justify-content: flex-end !important;
                 }
-                .flag-btn {
-                    background: none;
-                    border: none;
-                    font-size: 28px;
-                    cursor: pointer;
-                    padding: 0 2px;
-                    border-radius: 4px;
-                    transition: transform 0.1s ease;
+                div[data-testid="stHorizontalBlock"] > div {
+                    flex: 0 0 auto !important;
+                    width: auto !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
                 }
-                .flag-btn:hover {
+                .stButton button {
+                    background: transparent !important;
+                    border: none !important;
+                    font-size: 28px !important;
+                    padding: 0 4px !important;
+                    margin: 0 !important;
+                    min-width: 32px !important;
+                    box-shadow: none !important;
+                }
+                .stButton button:hover {
                     transform: scale(1.1);
                 }
             </style>
-            <div class="flag-holder">
-                <button class="flag-btn" id="flag_en">🇺🇸</button>
-                <button class="flag-btn" id="flag_pt">🇧🇷</button>
-                <button class="flag-btn" id="flag_es">🇪🇸</button>
-            </div>
-            <script>
-                document.getElementById('flag_en').onclick = () => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'flag_en';
-                    input.value = 'clicked';
-                    document.body.appendChild(input);
-                    input.dispatchEvent(new Event('change', {bubbles: true}));
-                };
-                document.getElementById('flag_pt').onclick = () => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'flag_pt';
-                    input.value = 'clicked';
-                    document.body.appendChild(input);
-                    input.dispatchEvent(new Event('change', {bubbles: true}));
-                };
-                document.getElementById('flag_es').onclick = () => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'flag_es';
-                    input.value = 'clicked';
-                    document.body.appendChild(input);
-                    input.dispatchEvent(new Event('change', {bubbles: true}));
-                };
-            </script>
         """, unsafe_allow_html=True)
-
-    col_a, col_b, col_c = st.columns([0.2, 0.2, 0.2])
+        
+        # Três botões em colunas estreitas, na mesma linha
+        col_a, col_b, col_c = st.columns([0.2, 0.2, 0.2])
         with col_a:
             if st.button("🇺🇸", key="flag_en", help="English"):
                 st.session_state.sel_idioma = "English"
