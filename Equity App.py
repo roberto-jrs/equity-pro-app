@@ -486,6 +486,8 @@ def login_ui():
                 /* Remove fundo azul padrão do link clicado */
                 .flag-container a:active, .flag-container a:focus {
                     background: none !important;
+                    color: inherit !important;
+                    outline: none;
                 }
             </style>
             <div class="flag-container">
