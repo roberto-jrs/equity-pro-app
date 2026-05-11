@@ -445,24 +445,58 @@ def login_ui():
     
     with col_flags:
         st.markdown("""
-        <style>
-            /* Remove espaçamento entre colunas */
-            div[data-testid="column"] {
-                padding-left: 0 !important;
-                padding-right: 0 !important;
-            }
-            /* Remove padding e margin dos botões */
-            .stButton button {
-                padding: 0 !important;
-                margin: 0 !important;
-                background: transparent !important;
-                border: none !important;
-                font-size: 28px !important;
-                min-width: 32px !important;
-                width: auto !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+            <style>
+                .flag-holder {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 2px;
+                    margin-top: 12px;
+                }
+                .flag-btn {
+                    background: none;
+                    border: none;
+                    font-size: 28px;
+                    cursor: pointer;
+                    padding: 0 2px;
+                    border-radius: 4px;
+                    transition: transform 0.1s ease;
+                }
+                .flag-btn:hover {
+                    transform: scale(1.1);
+                }
+            </style>
+            <div class="flag-holder">
+                <button class="flag-btn" id="flag_en">🇺🇸</button>
+                <button class="flag-btn" id="flag_pt">🇧🇷</button>
+                <button class="flag-btn" id="flag_es">🇪🇸</button>
+            </div>
+            <script>
+                document.getElementById('flag_en').onclick = () => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'flag_en';
+                    input.value = 'clicked';
+                    document.body.appendChild(input);
+                    input.dispatchEvent(new Event('change', {bubbles: true}));
+                };
+                document.getElementById('flag_pt').onclick = () => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'flag_pt';
+                    input.value = 'clicked';
+                    document.body.appendChild(input);
+                    input.dispatchEvent(new Event('change', {bubbles: true}));
+                };
+                document.getElementById('flag_es').onclick = () => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'flag_es';
+                    input.value = 'clicked';
+                    document.body.appendChild(input);
+                    input.dispatchEvent(new Event('change', {bubbles: true}));
+                };
+            </script>
+        """, unsafe_allow_html=True)
     
     # Cria colunas com largura mínima (proporção 0.2 cada)
     col_a, col_b, col_c = st.columns([0.2, 0.2, 0.2])
