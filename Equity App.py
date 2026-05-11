@@ -461,41 +461,42 @@ def login_ui():
     with col_flags:
         # CSS para estilizar os botões como bandeiras, sem fundo e com hover
         st.markdown("""
-            <style>
-                .flag-container {
-                    display: flex;
-                    justify-content: flex-end;
-                    gap: 4px;
-                    margin-top: 12px;
-                }
-                .flag-container a {
-                    text-decoration: none;
-                    background: none !important;
-                    border: none !important;
-                    font-size: 28px;
-                    cursor: pointer;
-                    padding: 0 2px;
-                    border-radius: 4px;
-                    transition: transform 0.1s ease;
-                    display: inline-block;
-                }
-                .flag-container a:hover {
-                    transform: scale(1.1);
-                    background: none !important;
-                }
-                /* Remove fundo azul padrão do link clicado */
-                .flag-container a:active, .flag-container a:focus {
-                    background: none !important;
-                    color: inherit !important;
-                    outline: none;
-                }
-            </style>
-            <div class="flag-container">
-                <a href="?lang=en" target="_self">🇺🇸</a>
-                <a href="?lang=pt" target="_self">🇧🇷</a>
-                <a href="?lang=es" target="_self">🇪🇸</a>
-            </div>
-        """, unsafe_allow_html=True)
+    <style>
+        .flag-container {
+            display: flex;
+            justify-content: flex-end;
+            gap: 2px;
+            margin-top: 12px;
+        }
+        .flag-container a {
+            text-decoration: none;
+            background: none !important;
+            border: none !important;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0 2px;
+            border-radius: 4px;
+            transition: transform 0.1s ease;
+            display: inline-block;
+            color: inherit !important;      /* ← esta é a linha que faltava */
+        }
+        .flag-container a:hover {
+            transform: scale(1.1);
+            background: none !important;
+            color: inherit !important;
+        }
+        .flag-container a:active, .flag-container a:focus {
+            background: none !important;
+            color: inherit !important;
+            outline: none;
+        }
+    </style>
+    <div class="flag-container">
+        <a href="?lang=en" target="_self">🇺🇸</a>
+        <a href="?lang=pt" target="_self">🇧🇷</a>
+        <a href="?lang=es" target="_self">🇪🇸</a>
+    </div>
+""", unsafe_allow_html=True)
 
     # Captura o parâmetro da URL para alterar o idioma
     if "lang" in st.query_params:
