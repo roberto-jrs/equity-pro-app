@@ -444,6 +444,7 @@ def login_ui():
         st.title("〽︎ Equity Pro")
     
     with col_flags:
+        # HTML/CSS com botões funcionais (via onclick e query parameters)
         st.markdown("""
             <style>
                 .flag-holder {
@@ -466,53 +467,13 @@ def login_ui():
                 }
             </style>
             <div class="flag-holder">
-                <button class="flag-btn" id="flag_en">🇺🇸</button>
-                <button class="flag-btn" id="flag_pt">🇧🇷</button>
-                <button class="flag-btn" id="flag_es">🇪🇸</button>
+                <button class="flag-btn" onclick="window.location.href='?lang=en'">🇺🇸</button>
+                <button class="flag-btn" onclick="window.location.href='?lang=pt'">🇧🇷</button>
+                <button class="flag-btn" onclick="window.location.href='?lang=es'">🇪🇸</button>
             </div>
-            <script>
-                document.getElementById('flag_en').onclick = () => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'flag_en';
-                    input.value = 'clicked';
-                    document.body.appendChild(input);
-                    input.dispatchEvent(new Event('change', {bubbles: true}));
-                };
-                document.getElementById('flag_pt').onclick = () => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'flag_pt';
-                    input.value = 'clicked';
-                    document.body.appendChild(input);
-                    input.dispatchEvent(new Event('change', {bubbles: true}));
-                };
-                document.getElementById('flag_es').onclick = () => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'flag_es';
-                    input.value = 'clicked';
-                    document.body.appendChild(input);
-                    input.dispatchEvent(new Event('change', {bubbles: true}));
-                };
-            </script>
         """, unsafe_allow_html=True)
 
-    col_a, col_b, col_c = st.columns([0.1, 0.1, 0.1])
-    
-    with col_a:
-        if st.button("🇺🇸", key="flag_en", help="English"):
-            st.session_state.sel_idioma = "English"
-            st.rerun()
-    with col_b:
-        if st.button("🇧🇷", key="flag_pt", help="Português"):
-            st.session_state.sel_idioma = "Português (BR)"
-            st.rerun()
-    with col_c:
-        if st.button("🇪🇸", key="flag_es", help="Español"):
-            st.session_state.sel_idioma = "Español"
-            st.rerun()
-    
+    # daqui para baixo, todo o código original das abas (Login / Criar Conta) permanece IGUAL
     t = idiomas[st.session_state.sel_idioma]
 
     if "aba_atual" not in st.session_state:
