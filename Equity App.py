@@ -532,8 +532,8 @@ def login_ui():
     # ... dentro de def login_ui(): após a criação das abas (aba) ...
 
     if aba == t["login_tab"]:
-        # Cria uma coluna para o formulário com largura proporcional pequena (ex: 20% da tela)
-        col_form, _ = st.columns([1, 4])  # a coluna do formulário ocupa 20% (1 de 5 partes)
+        # Cria uma coluna para o formulário 
+        col_form, _ = st.columns([2, 3])  
         with col_form:
             username = st.text_input(t["username"], key="login_user")
             senha = st.text_input(t["password"], type="password", key="login_pass")
@@ -551,7 +551,7 @@ def login_ui():
                     st.error(t.get("login_error", "Usuário ou senha inválidos"))
 
     else:  # Criar conta
-        col_form, _ = st.columns([1, 4])  # mesma largura
+        col_form, _ = st.columns([2, 3]) 
         with col_form:
             new_username = st.text_input(t["username"], key="cad_user")
             new_nome = st.text_input(t["full_name"], key="cad_nome")
