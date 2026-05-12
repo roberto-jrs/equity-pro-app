@@ -532,17 +532,9 @@ def login_ui():
     # ... dentro de def login_ui(): após a criação das abas (aba) ...
 
     if aba == t["login_tab"]:
-        # Aplica CSS para limitar a largura do formulário e alinhar à esquerda
-        st.markdown("""
-            <style>
-                .login-form {
-                    max-width: 350px;
-                    margin-left: 0;
-                }
-            </style>
-        """, unsafe_allow_html=True)
-        with st.container():
-            st.markdown('<div class="login-form">', unsafe_allow_html=True)
+        # Cria uma coluna para o formulário com largura proporcional pequena (ex: 20% da tela)
+        col_form, _ = st.columns([1, 4])  # a coluna do formulário ocupa 20% (1 de 5 partes)
+        with col_form:
             username = st.text_input(t["username"], key="login_user")
             senha = st.text_input(t["password"], type="password", key="login_pass")
             lembrar = st.checkbox(t["remember_me"])
@@ -557,19 +549,10 @@ def login_ui():
                     st.rerun()
                 else:
                     st.error(t.get("login_error", "Usuário ou senha inválidos"))
-            st.markdown('</div>', unsafe_allow_html=True)
 
     else:  # Criar conta
-        st.markdown("""
-            <style>
-                .login-form {
-                    max-width: 350px;
-                    margin-left: 0;
-                }
-            </style>
-        """, unsafe_allow_html=True)
-        with st.container():
-            st.markdown('<div class="login-form">', unsafe_allow_html=True)
+        col_form, _ = st.columns([1, 4])  # mesma largura
+        with col_form:
             new_username = st.text_input(t["username"], key="cad_user")
             new_nome = st.text_input(t["full_name"], key="cad_nome")
             new_email = st.text_input(t["email_optional"], key="cad_email")
@@ -589,7 +572,6 @@ def login_ui():
                         st.rerun()
                     else:
                         st.error(t.get("signup_error", "Usuário já existe"))
-            st.markdown('</div>', unsafe_allow_html=True)
     
 if not st.session_state["autenticado"]:
     login_ui()
