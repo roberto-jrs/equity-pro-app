@@ -576,9 +576,9 @@ def login_ui():
                         else:
                             st.error(t.get("signup_error", "Usuário já existe"))
     
-    if not st.session_state["autenticado"]:
-        login_ui()
-        st.stop()
+if not st.session_state["autenticado"]:
+    login_ui()
+    st.stop()
 
 # Se chegou aqui, está autenticado
 usuario_logado = st.session_state["usuario"]
