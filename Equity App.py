@@ -278,7 +278,7 @@ idiomas = {
         "phone_optional": "Phone (optional)",
         "login_button": "Login",
         "signup_button": "Sign up",
-        "remember_me": "Remember me for 30 days",
+        "remember_me": "Remember my login",
     },
     "Português (BR)": {
         "titulo_idioma": "IDIOMA", "config": "CONFIGURAÇÕES", "moeda": "Moeda de Exibição:",
@@ -324,7 +324,7 @@ idiomas = {
         "phone_optional": "Telefone (opcional)",
         "login_button": "Entrar",
         "signup_button": "Cadastrar",
-        "remember_me": "Lembrar acesso por 30 dias",
+        "remember_me": "Lembrar meu acesso",
     },
     "Español": {
         # (similar, por brevidade mantenho igual ao PT mas com tradução para ES, você pode completar depois)
@@ -371,7 +371,7 @@ idiomas = {
         "phone_optional": "Teléfono (opcional)",
         "login_button": "Iniciar sesión",
         "signup_button": "Registrarse",
-        "remember_me": "Recordar acceso por 30 días",
+        "remember_me": "Recordar mi acceso",
     }
 }
 
