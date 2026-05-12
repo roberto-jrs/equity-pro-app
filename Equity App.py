@@ -532,49 +532,64 @@ def login_ui():
     # ... dentro de def login_ui(): após a criação das abas (aba) ...
 
     if aba == t["login_tab"]:
-        # Centraliza o formulário de login
-        col_esq, col_center, col_dir = st.columns([1, 2, 1])
-        with col_center:
-            with st.container():
-                username = st.text_input(t["username"], key="login_user")
-                senha = st.text_input(t["password"], type="password", key="login_pass")
-                lembrar = st.checkbox(t["remember_me"])
-                if st.button(t["login_button"], key="btn_login", use_container_width=True):
-                    user = verificar_login(username, senha)
-                    if user:
-                        st.session_state["autenticado"] = True
-                        st.session_state["usuario"] = user
-                        if lembrar:
-                            token = gerar_token(username)
-                            st.query_params["session"] = token
-                        st.rerun()
-                    else:
-                        st.error(t.get("login_error", "Usuário ou senha inválidos"))
-    
-    else:  # Criar conta
-        # Centraliza o formulário de cadastro
-        col_esq, col_center, col_dir = st.columns([1, 2, 1])
-        with col_center:
-            with st.container():
-                new_username = st.text_input(t["username"], key="cad_user")
-                new_nome = st.text_input(t["full_name"], key="cad_nome")
-                new_email = st.text_input(t["email_optional"], key="cad_email")
-                new_telefone = st.text_input(t["phone_optional"], key="cad_telefone")
-                new_senha = st.text_input(t["password"], type="password", key="cad_pass")
-                new_senha2 = st.text_input(t["confirm_password"], type="password", key="cad_pass2")
-                if st.button(t["signup_button"], key="btn_cad", use_container_width=True):
-                    if new_senha != new_senha2:
-                        st.error("Senhas não coincidem")
-                    elif len(new_username) < 3:
-                        st.error(t.get("username_min", "Usuário deve ter pelo menos 3 caracteres"))
-                    else:
-                        ok = cadastrar_usuario(new_username, new_nome, new_senha, new_email, new_telefone)
-                        if ok:
-                            st.session_state["cadastro_sucesso"] = True
-                            st.success(t.get("signup_success", "Usuário criado! Redirecionando para o login..."))
-                            st.rerun()
-                        else:
-                            st.error(t.get("signup_error", "Usuário já existe"))
+    # Aplica CSS para limitar a largura do formulário e alinhar à esquerda
+    st.markdown("""
+        <style>
+            .login-form {
+                max-width: 350px;
+                margin-left: 0;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+    with st.container():
+        st.markdown('<div class="login-form">', unsafe_allow_html=True)
+        username = st.text_input(t["username"], key="login_user")
+        senha = st.text_input(t["password"], type="password", key="login_pass")
+        lembrar = st.checkbox(t["remember_me"])
+        if st.button(t["login_button"], key="btn_login", use_container_width=True):
+            user = verificar_login(username, senha)
+            if user:
+                st.session_state["autenticado"] = True
+                st.session_state["usuario"] = user
+                if lembrar:
+                    token = gerar_token(username)
+                    st.query_params["session"] = token
+                st.rerun()
+            else:
+                st.error(t.get("login_error", "Usuário ou senha inválidos"))
+        st.markdown('</div>', unsafe_allow_html=True)
+
+else:  # Criar conta
+    st.markdown("""
+        <style>
+            .login-form {
+                max-width: 350px;
+                margin-left: 0;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+    with st.container():
+        st.markdown('<div class="login-form">', unsafe_allow_html=True)
+        new_username = st.text_input(t["username"], key="cad_user")
+        new_nome = st.text_input(t["full_name"], key="cad_nome")
+        new_email = st.text_input(t["email_optional"], key="cad_email")
+        new_telefone = st.text_input(t["phone_optional"], key="cad_telefone")
+        new_senha = st.text_input(t["password"], type="password", key="cad_pass")
+        new_senha2 = st.text_input(t["confirm_password"], type="password", key="cad_pass2")
+        if st.button(t["signup_button"], key="btn_cad", use_container_width=True):
+            if new_senha != new_senha2:
+                st.error("Senhas não coincidem")
+            elif len(new_username) < 3:
+                st.error(t.get("username_min", "Usuário deve ter pelo menos 3 caracteres"))
+            else:
+                ok = cadastrar_usuario(new_username, new_nome, new_senha, new_email, new_telefone)
+                if ok:
+                    st.session_state["cadastro_sucesso"] = True
+                    st.success(t.get("signup_success", "Usuário criado! Redirecionando para o login..."))
+                    st.rerun()
+                else:
+                    st.error(t.get("signup_error", "Usuário já existe"))
+        st.markdown('</div>', unsafe_allow_html=True)
     
 if not st.session_state["autenticado"]:
     login_ui()
